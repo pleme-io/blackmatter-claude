@@ -1,10 +1,9 @@
-# Claude Code configuration — LSP, Zoekt daemon, Codesearch daemon, MCP servers
+# Claude Code configuration — LSP, Zoekt daemon, MCP servers
 #
 # Declaratively manages:
 #   ~/.claude/lsp.json  — LSP server configuration
 #   ~/.claude.json      — MCP servers (user-scope, deep-merged)
 #   launchd agents      — Zoekt webserver + periodic indexer (Darwin)
-#   launchd agents      — Codesearch serve daemon with file watching (Darwin)
 #
 # MCP servers: zoekt, codesearch, github, kubernetes, fluxcd
 # LSP servers: nixd, rust-analyzer, typescript-language-server,
@@ -20,7 +19,6 @@ with lib; let
   cfg = config.blackmatter.components.claude;
   lspCfg = cfg.lsp;
   zoektCfg = cfg.zoekt;
-  codesearchCfg = cfg.codesearch;
   mcpCfg = cfg.mcp;
   skillsCfg = cfg.skills;
   isDarwin = pkgs.stdenv.isDarwin;
@@ -73,57 +71,6 @@ with lib; let
         -index "${zoektCfg.indexDir}" \
         ${concatStringsSep " " allArgs} \
         ${repoArgs}
-    '';
-
-  # ── Codesearch serve wrapper (setup + initial index + serve) ────────────
-  #
-  # codesearch serve requires an existing index. This wrapper:
-  # 1. Downloads the embedding model if not already cached (codesearch setup)
-  # 2. Creates a global index for the repo if one doesn't exist yet
-  # 3. Execs into codesearch serve for live file watching + incremental indexing
-  codesearchServeScript = repo: let
-    bin = "${codesearchCfg.package}/bin/codesearch";
-    modelArgs = optionals (codesearchCfg.model != null) ["--model" codesearchCfg.model];
-    modelArgsStr = concatStringsSep " " modelArgs;
-    portArgs = ["-p" (toString codesearchCfg.port)];
-    portArgsStr = concatStringsSep " " portArgs;
-    # Derive a launchd-safe label from the repo path
-    repoLabel = replaceStrings ["/"] ["-"] (removePrefix "/" repo);
-  in
-    pkgs.writeShellScript "codesearch-serve-${repoLabel}" ''
-      set -euo pipefail
-      export CODESEARCH_LMDB_MAP_SIZE_MB="${toString codesearchCfg.lmdbMapSizeMB}"
-
-      cd "${repo}"
-
-      # 0. Kill any stale codesearch serve process on our port
-      #    (prevents duplicates after darwin-rebuild changes store path)
-      existing=$(lsof -ti :${toString codesearchCfg.port} -sTCP:LISTEN 2>/dev/null || true)
-      if [ -n "$existing" ]; then
-        echo "Killing stale codesearch serve (PID $existing) on port ${toString codesearchCfg.port}"
-        kill $existing 2>/dev/null || true
-        sleep 1
-      fi
-
-      # 1. Ensure embedding model is downloaded
-      ${bin} setup ${modelArgsStr} --quiet 2>/dev/null || ${bin} setup ${modelArgsStr}
-
-      # 2. Create global index if not already present
-      project_name="$(basename "${repo}")"
-      global_db="$HOME/.codesearch.dbs/$project_name/.codesearch.db"
-      if [ ! -d "$global_db" ]; then
-        ${bin} index --add --global ${modelArgsStr}
-      fi
-
-      # Workaround: codesearch v0.1.142 global DB discovery bug — serve/search/mcp
-      # look for .codesearch.db inside the repo dir but global index lives in
-      # ~/.codesearch.dbs/<project>/. Symlink bridges the gap.
-      if [ -d "$global_db" ] && [ ! -e "${repo}/.codesearch.db" ]; then
-        ln -sf "$global_db" "${repo}/.codesearch.db"
-      fi
-
-      # 3. Serve with live file watching (keeps index updated)
-      exec ${bin} serve ${portArgsStr} ${modelArgsStr}
     '';
 
   # ── LSP server map ──────────────────────────────────────────────────────
@@ -210,15 +157,8 @@ with lib; let
         };
       };
     }
-    // optionalAttrs mcpCfg.codesearch.enable {
-      codesearch = {
-        type = "stdio";
-        command = "${mcpCfg.codesearch.package}/bin/codesearch";
-        args = ["mcp"];
-        env = {
-          CODESEARCH_LMDB_MAP_SIZE_MB = toString codesearchCfg.lmdbMapSizeMB;
-        };
-      };
+    // optionalAttrs (mcpCfg.codesearch.enable && config.services.codesearch.mcp.serverEntry != {}) {
+      codesearch = config.services.codesearch.mcp.serverEntry;
     }
     // optionalAttrs mcpCfg.github.enable {
       github = {
@@ -449,46 +389,6 @@ in {
       };
     };
 
-    # ── Codesearch daemon options ─────────────────────────────────────
-
-    codesearch = {
-      enable = mkOption {
-        type = types.bool;
-        default = false;
-        description = "Enable Codesearch daemon (semantic code search with live file watching)";
-      };
-
-      package = mkOption {
-        type = types.package;
-        default = pkgs.codesearch;
-        description = "codesearch package providing codesearch binary";
-      };
-
-      repos = mkOption {
-        type = types.listOf types.str;
-        default = [];
-        description = "Repository paths to index (e.g. [\"/home/user/code/myrepo\"])";
-      };
-
-      model = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        description = "Embedding model to use (null = codesearch default mxbai-embed-xsmall-v1). Options: minilm-l6, bge-small, jina-code, etc.";
-      };
-
-      port = mkOption {
-        type = types.int;
-        default = 4444;
-        description = "Codesearch serve port (HTTP API for search)";
-      };
-
-      lmdbMapSizeMB = mkOption {
-        type = types.int;
-        default = 2048;
-        description = "LMDB map size in MB. Default 2GB handles large monorepos. Set via CODESEARCH_LMDB_MAP_SIZE_MB env var.";
-      };
-    };
-
     # ── MCP server options ─────────────────────────────────────────────
 
     mcp = {
@@ -510,13 +410,7 @@ in {
         enable = mkOption {
           type = types.bool;
           default = false;
-          description = "Enable codesearch MCP server for semantic code search";
-        };
-
-        package = mkOption {
-          type = types.package;
-          default = pkgs.codesearch;
-          description = "codesearch package";
+          description = "Enable codesearch MCP server for semantic code search (reads serverEntry from services.codesearch.mcp)";
         };
       };
 
@@ -664,30 +558,6 @@ in {
         };
       };
     })
-    # Codesearch daemon — launchd agents (Darwin only)
-    # Runs `codesearch serve` per repo with live file watching.
-    # The wrapper script handles model setup and initial indexing.
-    (mkIf (cfg.enable && codesearchCfg.enable && isDarwin && codesearchCfg.repos != []) (let
-      mkCodesearchAgent = repo: let
-        repoLabel = replaceStrings ["/"] ["-"] (removePrefix "/" repo);
-        safeName = "codesearch-${repoLabel}";
-      in
-        nameValuePair safeName {
-          enable = true;
-          config = {
-            Label = "io.pleme.${safeName}";
-            ProgramArguments = ["${codesearchServeScript repo}"];
-            RunAtLoad = true;
-            KeepAlive = true;
-            ProcessType = "Adaptive";
-            StandardOutPath = "${config.home.homeDirectory}/Library/Logs/codesearch-serve.log";
-            StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/codesearch-serve.err";
-          };
-        };
-    in {
-      launchd.agents = builtins.listToAttrs (map mkCodesearchAgent codesearchCfg.repos);
-    }))
-
     # Skills → ~/.claude/skills/{name}/SKILL.md (user scope)
     # Auto-discovers bundled skills from ../skills/ + merges extraSkills
     (mkIf (cfg.enable && skillsCfg.enable && allSkillFiles != {}) {
