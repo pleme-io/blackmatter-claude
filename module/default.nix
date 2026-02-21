@@ -22,7 +22,19 @@ with lib; let
   zoektCfg = cfg.zoekt;
   codesearchCfg = cfg.codesearch;
   mcpCfg = cfg.mcp;
+  skillsCfg = cfg.skills;
   isDarwin = pkgs.stdenv.isDarwin;
+
+  # ── Bundled skills (auto-discovered from ../skills/) ────────────────
+  skillsDir = ../skills;
+  bundledSkillNames =
+    if builtins.pathExists skillsDir
+    then builtins.attrNames (lib.filterAttrs (_: t: t == "directory") (builtins.readDir skillsDir))
+    else [];
+  bundledSkillFiles = lib.listToAttrs (map (name:
+    lib.nameValuePair name (skillsDir + "/${name}/SKILL.md")
+  ) bundledSkillNames);
+  allSkillFiles = bundledSkillFiles // skillsCfg.extraSkills;
   ctagsCfg = zoektCfg.ctags;
   webCfg = zoektCfg.webserver;
 
@@ -556,6 +568,26 @@ in {
         description = "Additional MCP server entries to merge into ~/.claude.json mcpServers";
       };
     };
+
+    # ── Skills options ──────────────────────────────────────────────────
+
+    skills = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy bundled Claude Code skills to ~/.claude/skills/ (user scope)";
+      };
+
+      extraSkills = mkOption {
+        type = types.attrsOf types.path;
+        default = {};
+        description = ''
+          Additional skill files to deploy. Keys are skill names,
+          values are paths to SKILL.md files.
+          Example: { my-skill = ./my-skill.md; }
+        '';
+      };
+    };
   };
 
   # ── Config ───────────────────────────────────────────────────────────
@@ -655,5 +687,15 @@ in {
     in {
       launchd.agents = builtins.listToAttrs (map mkCodesearchAgent codesearchCfg.repos);
     }))
+
+    # Skills → ~/.claude/skills/{name}/SKILL.md (user scope)
+    # Auto-discovers bundled skills from ../skills/ + merges extraSkills
+    (mkIf (cfg.enable && skillsCfg.enable && allSkillFiles != {}) {
+      home.file = lib.mapAttrs' (name: path:
+        lib.nameValuePair ".claude/skills/${name}/SKILL.md" {
+          source = path;
+        }
+      ) allSkillFiles;
+    })
   ];
 }
