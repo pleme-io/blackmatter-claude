@@ -1,10 +1,11 @@
-# Claude Code configuration — LSP, MCP servers
+# Claude Code configuration — LSP, MCP servers, skills
 #
 # Declaratively manages:
 #   ~/.claude/lsp.json  — LSP server configuration
 #   ~/.claude.json      — MCP servers (user-scope, deep-merged)
+#   ~/.claude/skills/   — Bundled + extra skills (auto-discovered)
 #
-# MCP servers: zoekt, codesearch, github, kubernetes, fluxcd
+# MCP servers: zoekt, codesearch, github, kubernetes, fluxcd, chrome-devtools, curupira, umbra
 # LSP servers: nixd, rust-analyzer, typescript-language-server,
 #   basedpyright, gopls, lua-language-server, bash-language-server, zls, ruby-lsp
 #
@@ -32,7 +33,14 @@ with lib; let
   allSkillFiles = bundledSkillFiles // skillsCfg.extraSkills;
 
   # ── GitHub MCP wrapper (maps GITHUB_TOKEN → GITHUB_PERSONAL_ACCESS_TOKEN) ──
+  # Reads token from sops-managed file (if configured) as primary source,
+  # falls back to GITHUB_TOKEN env var for flexibility.
   githubMcpScript = pkgs.writeShellScript "github-mcp-wrapper" ''
+    ${lib.optionalString (mcpCfg.github.tokenFile != null) ''
+    if [ -z "''${GITHUB_TOKEN:-}" ] && [ -f "${mcpCfg.github.tokenFile}" ]; then
+      GITHUB_TOKEN="$(cat "${mcpCfg.github.tokenFile}")"
+    fi
+    ''}
     export GITHUB_PERSONAL_ACCESS_TOKEN="''${GITHUB_TOKEN:-}"
     exec "${mcpCfg.github.package}/bin/github-mcp-server" stdio
   '';
@@ -108,6 +116,15 @@ with lib; let
     }
     // lspCfg.extraServers;
 
+  # ── Chrome DevTools MCP wrapper (npx-based) ──────────────────────────
+  # Connects to the chrome-dev Chrome instance (port 9222) via --browserUrl.
+  # --browserUrl alone = connect to existing browser only, never launch a new one.
+  # (--autoConnect means "use Chrome's default user data dir" — do NOT use it)
+  chromeDevtoolsMcpScript = pkgs.writeShellScript "chrome-devtools-mcp-wrapper" ''
+    exec ${pkgs.nodejs_20}/bin/npx -y chrome-devtools-mcp@latest \
+      --browserUrl=http://127.0.0.1:9222
+  '';
+
   # ── MCP server map ─────────────────────────────────────────────────────
 
   mcpServers =
@@ -135,6 +152,25 @@ with lib; let
         type = "stdio";
         command = "${mcpCfg.fluxcd.package}/bin/flux-operator-mcp";
         args = ["serve"];
+      };
+    }
+    // optionalAttrs mcpCfg.chromeDevtools.enable {
+      chrome-devtools = {
+        type = "stdio";
+        command = "${chromeDevtoolsMcpScript}";
+      };
+    }
+    // optionalAttrs mcpCfg.curupira.enable {
+      curupira = {
+        type = "stdio";
+        command = "${mcpCfg.curupira.package}/bin/curupira-mcp";
+        args = ["stdio"];
+      };
+    }
+    // optionalAttrs mcpCfg.umbra.enable {
+      umbra = {
+        type = "stdio";
+        command = "${mcpCfg.umbra.package}/bin/umbra";
       };
     }
     // mcpCfg.extraServers;
@@ -256,6 +292,12 @@ in {
           default = pkgs.github-mcp-server;
           description = "github-mcp-server package";
         };
+
+        tokenFile = mkOption {
+          type = types.nullOr types.str;
+          default = null;
+          description = "Path to file containing GitHub personal access token (e.g. sops-managed ~/.config/github/token). Read at MCP server startup. Falls back to GITHUB_TOKEN env var.";
+        };
       };
 
       kubernetes = {
@@ -283,6 +325,42 @@ in {
           type = types.package;
           default = pkgs.fluxcd-operator-mcp;
           description = "fluxcd-operator-mcp package";
+        };
+      };
+
+      chromeDevtools = {
+        enable = mkOption {
+          type = types.bool;
+          default = false;
+          description = "Enable Chrome DevTools MCP server for browser debugging and automation via CDP";
+        };
+      };
+
+      curupira = {
+        enable = mkOption {
+          type = types.bool;
+          default = false;
+          description = "Enable Curupira MCP server for React component inspection and state management debugging";
+        };
+
+        package = mkOption {
+          type = types.package;
+          default = pkgs.curupira-mcp;
+          description = "curupira-mcp package (from pleme-io/curupira flake)";
+        };
+      };
+
+      umbra = {
+        enable = mkOption {
+          type = types.bool;
+          default = false;
+          description = "Enable Umbra MCP server for Kubernetes container diagnostics and security scanning";
+        };
+
+        package = mkOption {
+          type = types.package;
+          default = pkgs.umbra;
+          description = "umbra package (from pleme-io/umbra flake)";
         };
       };
 
