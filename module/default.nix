@@ -1,9 +1,8 @@
-# Claude Code configuration — LSP, Zoekt daemon, MCP servers
+# Claude Code configuration — LSP, MCP servers
 #
 # Declaratively manages:
 #   ~/.claude/lsp.json  — LSP server configuration
 #   ~/.claude.json      — MCP servers (user-scope, deep-merged)
-#   launchd agents      — Zoekt webserver + periodic indexer (Darwin)
 #
 # MCP servers: zoekt, codesearch, github, kubernetes, fluxcd
 # LSP servers: nixd, rust-analyzer, typescript-language-server,
@@ -18,10 +17,8 @@
 with lib; let
   cfg = config.blackmatter.components.claude;
   lspCfg = cfg.lsp;
-  zoektCfg = cfg.zoekt;
   mcpCfg = cfg.mcp;
   skillsCfg = cfg.skills;
-  isDarwin = pkgs.stdenv.isDarwin;
 
   # ── Bundled skills (auto-discovered from ../skills/) ────────────────
   skillsDir = ../skills;
@@ -33,45 +30,12 @@ with lib; let
     lib.nameValuePair name (skillsDir + "/${name}/SKILL.md")
   ) bundledSkillNames);
   allSkillFiles = bundledSkillFiles // skillsCfg.extraSkills;
-  ctagsCfg = zoektCfg.ctags;
-  webCfg = zoektCfg.webserver;
 
   # ── GitHub MCP wrapper (maps GITHUB_TOKEN → GITHUB_PERSONAL_ACCESS_TOKEN) ──
   githubMcpScript = pkgs.writeShellScript "github-mcp-wrapper" ''
     export GITHUB_PERSONAL_ACCESS_TOKEN="''${GITHUB_TOKEN:-}"
     exec "${mcpCfg.github.package}/bin/github-mcp-server" stdio
   '';
-
-  # ── Zoekt indexer wrapper (ensures ctags is on PATH) ─────────────────
-  zoektIndexerScript = let
-    ctagsArgs =
-      if ctagsCfg.enable
-      then
-        (optionals ctagsCfg.require ["-require_ctags"])
-      else ["-disable_ctags"];
-    deltaArgs = optionals zoektCfg.delta ["-delta"];
-    branchArgs = optionals (zoektCfg.branches != "HEAD") ["-branches" zoektCfg.branches];
-    largeFileArgs = concatMap (p: ["-large_file" p]) zoektCfg.largeFiles;
-    parallelismArgs = ["-parallelism" (toString zoektCfg.parallelism)];
-    fileLimitArgs = ["-file_limit" (toString zoektCfg.fileLimit)];
-    allArgs = ctagsArgs ++ deltaArgs ++ branchArgs ++ largeFileArgs ++ parallelismArgs ++ fileLimitArgs;
-    repoArgs = concatStringsSep " " (map (r: ''"${r}"'') zoektCfg.repos);
-    ctagsPath =
-      if ctagsCfg.enable
-      then "${ctagsCfg.package}/bin"
-      else "";
-    logDir = "${config.home.homeDirectory}/Library/Logs";
-  in
-    pkgs.writeShellScript "zoekt-indexer" ''
-      # Truncate previous logs — stale output is noise for a periodic agent
-      : > "${logDir}/zoekt-indexer.log"
-      : > "${logDir}/zoekt-indexer.err"
-      export PATH="${ctagsPath}:${zoektCfg.package}/bin:${pkgs.git}/bin:$PATH"
-      exec zoekt-git-index \
-        -index "${zoektCfg.indexDir}" \
-        ${concatStringsSep " " allArgs} \
-        ${repoArgs}
-    '';
 
   # ── LSP server map ──────────────────────────────────────────────────────
 
@@ -148,14 +112,8 @@ with lib; let
 
   mcpServers =
     {}
-    // optionalAttrs mcpCfg.zoektMcp.enable {
-      zoekt = {
-        type = "stdio";
-        command = "${mcpCfg.zoektMcp.package}/bin/zoekt-mcp";
-        env = {
-          ZOEKT_URL = "http://localhost:${toString zoektCfg.port}";
-        };
-      };
+    // optionalAttrs (mcpCfg.zoektMcp.enable && config.services.zoekt.mcp.serverEntry != {}) {
+      zoekt = config.services.zoekt.mcp.serverEntry;
     }
     // optionalAttrs (mcpCfg.codesearch.enable && config.services.codesearch.mcp.serverEntry != {}) {
       codesearch = config.services.codesearch.mcp.serverEntry;
@@ -267,128 +225,6 @@ in {
       };
     };
 
-    # ── Zoekt daemon options ───────────────────────────────────────────
-
-    zoekt = {
-      enable = mkOption {
-        type = types.bool;
-        default = false;
-        description = "Enable Zoekt code search daemon (trigram-indexed search)";
-      };
-
-      package = mkOption {
-        type = types.package;
-        default = pkgs.zoekt;
-        description = "Zoekt package providing zoekt-webserver and zoekt-git-index";
-      };
-
-      ctags = {
-        enable = mkOption {
-          type = types.bool;
-          default = true;
-          description = "Enable universal-ctags for symbol extraction (enables sym: queries)";
-        };
-
-        package = mkOption {
-          type = types.package;
-          default = pkgs.universal-ctags;
-          description = "universal-ctags package";
-        };
-
-        require = mkOption {
-          type = types.bool;
-          default = true;
-          description = "If true, ctags calls must succeed (-require_ctags). Set false to allow partial indexing.";
-        };
-      };
-
-      repos = mkOption {
-        type = types.listOf types.str;
-        default = [];
-        description = "Git repository paths to index (e.g. [\"/home/user/code/myrepo\"])";
-      };
-
-      indexDir = mkOption {
-        type = types.str;
-        default = "${config.home.homeDirectory}/.zoekt/index";
-        description = "Directory for Zoekt index shards";
-      };
-
-      port = mkOption {
-        type = types.int;
-        default = 6070;
-        description = "Zoekt webserver listen port";
-      };
-
-      indexInterval = mkOption {
-        type = types.int;
-        default = 300;
-        description = "Re-index interval in seconds (launchd StartInterval)";
-      };
-
-      delta = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Only re-index changed files (-delta). Dramatically faster incremental updates.";
-      };
-
-      branches = mkOption {
-        type = types.str;
-        default = "HEAD";
-        description = "Comma-separated branch list to index (-branches). Default HEAD indexes only the checked-out branch.";
-      };
-
-      largeFiles = mkOption {
-        type = types.listOf types.str;
-        default = [];
-        description = "Glob patterns for files to index regardless of size (-large_file per entry).";
-      };
-
-      parallelism = mkOption {
-        type = types.int;
-        default = 4;
-        description = "Number of concurrent indexing processes (-parallelism).";
-      };
-
-      fileLimit = mkOption {
-        type = types.int;
-        default = 2097152;
-        description = "Maximum file size in bytes to index (-file_limit). Default 2 MiB matches upstream.";
-      };
-
-      webserver = {
-        rpc = mkOption {
-          type = types.bool;
-          default = true;
-          description = "Enable RPC interface (-rpc). Required for zoekt-mcp and programmatic access.";
-        };
-
-        html = mkOption {
-          type = types.bool;
-          default = true;
-          description = "Enable HTML web UI. Set false to run headless API-only.";
-        };
-
-        pprof = mkOption {
-          type = types.bool;
-          default = false;
-          description = "Enable pprof profiling endpoint (-pprof). For debugging only.";
-        };
-
-        logDir = mkOption {
-          type = types.str;
-          default = "${config.home.homeDirectory}/Library/Logs/zoekt";
-          description = "Directory for webserver log rotation (-log_dir).";
-        };
-
-        logRefresh = mkOption {
-          type = types.str;
-          default = "24h";
-          description = "Log rotation interval (-log_refresh). Go duration format.";
-        };
-      };
-    };
-
     # ── MCP server options ─────────────────────────────────────────────
 
     mcp = {
@@ -396,13 +232,7 @@ in {
         enable = mkOption {
           type = types.bool;
           default = false;
-          description = "Enable zoekt-mcp MCP server for Claude Code (wraps Zoekt search API)";
-        };
-
-        package = mkOption {
-          type = types.package;
-          default = pkgs.zoekt-mcp;
-          description = "zoekt-mcp package";
+          description = "Enable zoekt-mcp MCP server for Claude Code (reads serverEntry from services.zoekt.mcp)";
         };
       };
 
@@ -509,55 +339,6 @@ in {
       '';
     })
 
-    # Zoekt daemon — launchd agents (Darwin only)
-    (mkIf (cfg.enable && zoektCfg.enable && isDarwin && zoektCfg.repos != []) {
-      # Ensure index + log directories exist before daemons start
-      home.activation.zoekt-index-dir = lib.hm.dag.entryAfter ["writeBoundary"] ''
-        run mkdir -p "${zoektCfg.indexDir}"
-        run mkdir -p "${webCfg.logDir}"
-      '';
-
-      launchd.agents.zoekt-webserver = {
-        enable = true;
-        config = {
-          Label = "io.pleme.zoekt-webserver";
-          ProgramArguments = [
-            "${zoektCfg.package}/bin/zoekt-webserver"
-            "-index"
-            zoektCfg.indexDir
-            "-listen"
-            ":${toString zoektCfg.port}"
-            "-log_dir"
-            webCfg.logDir
-            "-log_refresh"
-            webCfg.logRefresh
-          ]
-          ++ optionals webCfg.rpc ["-rpc"]
-          ++ optionals webCfg.pprof ["-pprof"]
-          ++ optionals (!webCfg.html) ["-html=false"];
-          RunAtLoad = true;
-          KeepAlive = true;
-          ProcessType = "Adaptive";
-          StandardOutPath = "${config.home.homeDirectory}/Library/Logs/zoekt-webserver.log";
-          StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/zoekt-webserver.err";
-        };
-      };
-
-      launchd.agents.zoekt-indexer = {
-        enable = true;
-        config = {
-          Label = "io.pleme.zoekt-indexer";
-          ProgramArguments = ["${zoektIndexerScript}"];
-          StartInterval = zoektCfg.indexInterval;
-          RunAtLoad = true;
-          ProcessType = "Background";
-          LowPriorityIO = true;
-          Nice = 10;
-          StandardOutPath = "${config.home.homeDirectory}/Library/Logs/zoekt-indexer.log";
-          StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/zoekt-indexer.err";
-        };
-      };
-    })
     # Skills → ~/.claude/skills/{name}/SKILL.md (user scope)
     # Auto-discovers bundled skills from ../skills/ + merges extraSkills
     (mkIf (cfg.enable && skillsCfg.enable && allSkillFiles != {}) {
