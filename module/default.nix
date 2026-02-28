@@ -5,9 +5,9 @@
 #   ~/.claude.json      — MCP servers (user-scope, deep-merged)
 #   ~/.claude/skills/   — Bundled + extra skills (auto-discovered)
 #
-# MCP servers: zoekt, codesearch, github, kubernetes, fluxcd, chrome-devtools, curupira, umbra
+# MCP servers: zoekt, codesearch, github, kubernetes, fluxcd, chrome-devtools, curupira, umbra, typemill
 # LSP servers: nixd, rust-analyzer, typescript-language-server,
-#   basedpyright, gopls, lua-language-server, bash-language-server, zls, ruby-lsp
+#   basedpyright, gopls, lua-language-server, bash-language-server, zls, ruby-lsp, clangd
 #
 {
   lib,
@@ -117,6 +117,21 @@ with lib; let
         extensionToLanguage = {".rb" = "ruby";};
       };
     }
+    // optionalAttrs lspCfg.cpp.enable {
+      cpp = {
+        command = "clangd";
+        args = ["--background-index" "--clang-tidy" "--header-insertion=iwyu"];
+        extensionToLanguage = {
+          ".c" = "c";
+          ".h" = "c";
+          ".cpp" = "cpp";
+          ".cxx" = "cpp";
+          ".cc" = "cpp";
+          ".hpp" = "cpp";
+          ".hxx" = "cpp";
+        };
+      };
+    }
     // lspCfg.extraServers;
 
   # ── Chrome DevTools MCP wrapper (npx-based) ──────────────────────────
@@ -174,6 +189,13 @@ with lib; let
       umbra = {
         type = "stdio";
         command = "${mcpCfg.umbra.package}/bin/umbra";
+      };
+    }
+    // optionalAttrs mcpCfg.typemill.enable {
+      typemill = {
+        type = "stdio";
+        command = "${mcpCfg.typemill.package}/bin/mill";
+        args = ["start"];
       };
     }
     // mcpCfg.extraServers;
@@ -255,6 +277,12 @@ in {
         type = types.bool;
         default = true;
         description = "ruby-lsp - Ruby language server";
+      };
+
+      cpp.enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = "clangd - C/C++ language server";
       };
 
       extraServers = mkOption {
@@ -364,6 +392,20 @@ in {
           type = types.package;
           default = pkgs.umbra;
           description = "umbra package (from pleme-io/umbra flake)";
+        };
+      };
+
+      typemill = {
+        enable = mkOption {
+          type = types.bool;
+          default = false;
+          description = "Enable TypeMill MCP server for LSP-powered code navigation (inspect, search, rename, refactor)";
+        };
+
+        package = mkOption {
+          type = types.package;
+          default = pkgs.typemill;
+          description = "typemill package (mill binary)";
         };
       };
 
