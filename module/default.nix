@@ -198,14 +198,6 @@ with lib; let
         args = ["start"];
       };
     }
-    // optionalAttrs (mcpCfg.karakuri.enable
-        && config ? blackmatter
-        && config.blackmatter ? components
-        && config.blackmatter.components ? karakuri
-        && config.blackmatter.components.karakuri ? mcp
-        && config.blackmatter.components.karakuri.mcp.serverEntry != {}) {
-      karakuri = config.blackmatter.components.karakuri.mcp.serverEntry;
-    }
     // mcpCfg.extraServers;
 
   # ── Managed MCP config (deep-merged into ~/.claude.json) ──────────────
@@ -414,14 +406,6 @@ in {
           type = types.package;
           default = pkgs.typemill;
           description = "typemill package (mill binary)";
-        };
-      };
-
-      karakuri = {
-        enable = mkOption {
-          type = types.bool;
-          default = false;
-          description = "Enable Karakuri MCP server for live window manager state inspection and command dispatch (reads serverEntry from blackmatter.components.karakuri.mcp)";
         };
       };
 
