@@ -4,11 +4,13 @@
 #   ~/.claude/lsp.json  — LSP server configuration
 #   ~/.claude.json      — MCP servers (user-scope, deep-merged)
 #   ~/.claude/skills/   — Bundled + extra skills (auto-discovered)
+#   claude-code package — Centralized version management
 #
 # MCP servers: zoekt, codesearch, github, kubernetes, fluxcd, chrome-devtools, curupira, umbra, typemill
 # LSP servers: nixd, rust-analyzer, typescript-language-server,
 #   basedpyright, gopls, lua-language-server, bash-language-server, zls, ruby-lsp, clangd
 #
+{ claude-code }:
 {
   lib,
   config,
@@ -215,6 +217,13 @@ with lib; let
 in {
   options.blackmatter.components.claude = {
     enable = mkEnableOption "Claude Code configuration";
+
+    package = mkOption {
+      type = types.package;
+      default = claude-code.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      defaultText = literalExpression "claude-code.packages.\${pkgs.stdenv.hostPlatform.system}.default";
+      description = "Claude Code package to install. Defaults to the latest version from the claude-code flake.";
+    };
 
     # ── LSP options ────────────────────────────────────────────────────
 
@@ -684,6 +693,11 @@ in {
   # ── Config ───────────────────────────────────────────────────────────
 
   config = mkMerge [
+    # Claude Code package installation
+    (mkIf cfg.enable {
+      home.packages = [ cfg.package ];
+    })
+
     # LSP config → ~/.claude/lsp.json
     (mkIf (cfg.enable && lspCfg.enable) {
       home.file.".claude/lsp.json".text = builtins.toJSON serverEntries;

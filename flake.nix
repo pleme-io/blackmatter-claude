@@ -7,15 +7,21 @@
       url = "github:cachix/devenv";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    claude-code = {
+      url = "github:sadjow/claude-code-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, devenv }:
+  outputs = { self, nixpkgs, devenv, claude-code }:
   let
     forAllSystems = nixpkgs.lib.genAttrs [
       "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"
     ];
   in {
-    homeManagerModules.default = import ./module;
+    homeManagerModules.default = { pkgs, ... }: {
+      imports = [ (import ./module { inherit claude-code; }) ];
+    };
 
     devShells = forAllSystems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
