@@ -19,9 +19,7 @@
       "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"
     ];
   in {
-    homeManagerModules.default = { pkgs, ... }: {
-      imports = [ (import ./module { inherit claude-code; }) ];
-    };
+    homeManagerModules.default = import ./module;
 
     devShells = forAllSystems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
