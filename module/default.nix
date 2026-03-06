@@ -4,12 +4,13 @@
 #   ~/.claude/lsp.json  — LSP server configuration
 #   ~/.claude.json      — MCP servers (user-scope, deep-merged)
 #   ~/.claude/skills/   — Bundled + extra skills (auto-discovered)
-#   claude-code package — Centralized version management via pkgs overlay
+#   claude-code package — Centralized version management from claude-code flake
 #
 # MCP servers: zoekt, codesearch, github, kubernetes, fluxcd, chrome-devtools, curupira, umbra, typemill
 # LSP servers: nixd, rust-analyzer, typescript-language-server,
 #   basedpyright, gopls, lua-language-server, bash-language-server, zls, ruby-lsp, clangd
 #
+{ claude-code }:
 {
   lib,
   config,
@@ -219,11 +220,11 @@ in {
 
     package = mkOption {
       type = types.package;
-      default = pkgs.claude-code;
-      defaultText = literalExpression "pkgs.claude-code";
+      default = claude-code.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      defaultText = literalExpression "claude-code.packages.\${pkgs.stdenv.hostPlatform.system}.default";
       description = ''
-        Claude Code package to install. Defaults to pkgs.claude-code from the
-        blackmatter overlay, which sources from the claude-code flake input.
+        Claude Code package to install. Defaults to the latest version from the
+        claude-code flake input, ensuring consistent updates across all nodes.
       '';
     };
 
