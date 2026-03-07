@@ -20,7 +20,6 @@ fn main() {
         })
         .unwrap_or_else(|| "claude".into());
     let pct = extract_num(&input, "used_percentage").unwrap_or(0.0);
-    let cost = extract_num(&input, "total_cost_usd").unwrap_or(0.0);
 
     // Context progress bar
     let n = 12usize;
@@ -37,14 +36,8 @@ fn main() {
     let filled_bar = "━".repeat(filled);
     let empty_bar = "╌".repeat(empty);
 
-    let cost_section = if cost > 0.0 {
-        format!(" {d}│{r} {c}${cost:.2}{r}")
-    } else {
-        String::new()
-    };
-
     println!(
-        "{b}{model}{r} {d}│{r} {c}{filled_bar}{d}{empty_bar}{r} {w}{pct}%{r}{cost_section}",
+        "{b}{model}{r} {d}│{r} {c}{filled_bar}{d}{empty_bar}{r} {w}{pct}%{r}",
         pct = pct as u32,
     );
 }
