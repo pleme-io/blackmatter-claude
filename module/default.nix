@@ -220,7 +220,7 @@ with lib; let
   # Replaces the jq-based activation script. Deep-merges managed MCP config
   # into ~/.claude.json and removes entries with missing binaries (GC'd paths).
   configMergeBinary = pkgs.runCommand "claude-config-merge" {
-    nativeBuildInputs = [ pkgs.rustc ];
+    nativeBuildInputs = [ pkgs.rustc pkgs.stdenv.cc ];
   } ''
     mkdir -p $out/bin
     rustc --edition 2021 -O -o $out/bin/claude-config-merge ${./claude-config-merge.rs}
@@ -228,7 +228,7 @@ with lib; let
 
   # ── Nord frost statusline (Rust, zero deps) ─────────────────────────
   statuslineBinary = pkgs.runCommand "claude-nord-statusline" {
-    nativeBuildInputs = [ pkgs.rustc ];
+    nativeBuildInputs = [ pkgs.rustc pkgs.stdenv.cc ];
   } ''
     mkdir -p $out/bin
     rustc --edition 2021 -O -o $out/bin/claude-nord-statusline ${./statusline.rs}
