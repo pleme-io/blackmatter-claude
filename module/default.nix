@@ -216,6 +216,16 @@ with lib; let
   # Claude Code reads MCP servers from ~/.claude.json (user scope)
   claudeConfigPath = "${config.home.homeDirectory}/.claude.json";
 
+  # ── Config merge tool (Rust, zero deps) ─────────────────────────────
+  # Replaces the jq-based activation script. Deep-merges managed MCP config
+  # into ~/.claude.json and removes entries with missing binaries (GC'd paths).
+  configMergeBinary = pkgs.runCommand "claude-config-merge" {
+    nativeBuildInputs = [ pkgs.rustc ];
+  } ''
+    mkdir -p $out/bin
+    rustc --edition 2021 -O -o $out/bin/claude-config-merge ${./claude-config-merge.rs}
+  '';
+
   # ── Nord frost statusline (Rust, zero deps) ─────────────────────────
   statuslineBinary = pkgs.runCommand "claude-nord-statusline" {
     nativeBuildInputs = [ pkgs.rustc ];
@@ -732,25 +742,28 @@ in {
       home.packages = [ cfg.package ];
     })
 
+    # Auto-enable service-level MCP flags when the claude module enables them.
+    # This bridges the gap between blackmatter.components.claude.mcp.zoektMcp.enable
+    # and services.zoekt.mcp.enable (which gates serverEntry generation).
+    (mkIf (cfg.enable && mcpCfg.zoektMcp.enable) {
+      services.zoekt.mcp.enable = mkDefault true;
+    })
+    (mkIf (cfg.enable && mcpCfg.codesearch.enable) {
+      services.codesearch.mcp.enable = mkDefault true;
+    })
+
     # LSP config → ~/.claude/lsp.json
     (mkIf (cfg.enable && lspCfg.enable) {
       home.file.".claude/lsp.json".text = builtins.toJSON serverEntries;
     })
 
     # MCP servers → deep-merged into ~/.claude.json (user scope)
-    # Keeps the file writable so Claude Code can update its own state
+    # Uses Rust binary for robust merge + stale path cleanup
     (mkIf (cfg.enable && hasManagedConfig) {
       home.activation.claude-mcp-config = lib.hm.dag.entryAfter ["writeBoundary"] ''
-        config_file="${claudeConfigPath}"
-        managed="${managedConfigFile}"
-        if [ -f "$config_file" ]; then
-          # Deep-merge: managed keys win, existing keys preserved
-          ${pkgs.jq}/bin/jq -s '.[0] * .[1]' "$config_file" "$managed" > "$config_file.tmp"
-          mv "$config_file.tmp" "$config_file"
-        else
-          cp "$managed" "$config_file"
-          chmod 644 "$config_file"
-        fi
+        run ${configMergeBinary}/bin/claude-config-merge \
+          "${managedConfigFile}" \
+          --config "${claudeConfigPath}"
       '';
     })
 
@@ -767,16 +780,10 @@ in {
     # Statusline → deep-merged into ~/.claude/settings.json
     (mkIf (cfg.enable && themeCfg.statusline.enable) {
       home.activation.claude-statusline-config = lib.hm.dag.entryAfter ["writeBoundary"] ''
-        settings_file="${claudeSettingsPath}"
-        managed="${statuslineConfigFile}"
-        if [ -f "$settings_file" ]; then
-          ${pkgs.jq}/bin/jq -s '.[0] * .[1]' "$settings_file" "$managed" > "$settings_file.tmp"
-          mv "$settings_file.tmp" "$settings_file"
-        else
-          mkdir -p "$(dirname "$settings_file")"
-          cp "$managed" "$settings_file"
-          chmod 644 "$settings_file"
-        fi
+        run mkdir -p "$(dirname "${claudeSettingsPath}")"
+        run ${configMergeBinary}/bin/claude-config-merge \
+          "${statuslineConfigFile}" \
+          --config "${claudeSettingsPath}"
       '';
     })
 
