@@ -23,6 +23,7 @@ with lib; let
   mcpCfg = cfg.mcp;
   mcpPkgsCfg = cfg.mcpPackages;
   skillsCfg = cfg.skills;
+  themeCfg = cfg.theme;
 
   inherit (pkgs.stdenv.hostPlatform) isLinux isDarwin;
 
@@ -214,6 +215,24 @@ with lib; let
 
   # Claude Code reads MCP servers from ~/.claude.json (user scope)
   claudeConfigPath = "${config.home.homeDirectory}/.claude.json";
+
+  # ── Nord frost statusline (Rust, zero deps) ─────────────────────────
+  statuslineBinary = pkgs.runCommand "claude-nord-statusline" {
+    nativeBuildInputs = [ pkgs.rustc ];
+  } ''
+    mkdir -p $out/bin
+    rustc --edition 2021 -O -o $out/bin/claude-nord-statusline ${./statusline.rs}
+  '';
+
+  statuslineConfigFile = pkgs.writeText "claude-statusline-config.json"
+    (builtins.toJSON {
+      statusLine = {
+        type = "command";
+        command = "${statuslineBinary}/bin/claude-nord-statusline";
+      };
+    });
+
+  claudeSettingsPath = "${config.home.homeDirectory}/.claude/settings.json";
 in {
   options.blackmatter.components.claude = {
     enable = mkEnableOption "Claude Code configuration";
@@ -445,6 +464,18 @@ in {
           values are paths to SKILL.md files.
           Example: { my-skill = ./my-skill.md; }
         '';
+      };
+    };
+
+    # ── Theme options ────────────────────────────────────────────────
+
+    theme = {
+      statusline = {
+        enable = mkOption {
+          type = types.bool;
+          default = true;
+          description = "Deploy Nord frost statusline — model, context usage, and cost using ANSI colors mapped to Nord via terminal palette";
+        };
       };
     };
 
@@ -731,6 +762,22 @@ in {
           source = path;
         }
       ) allSkillFiles;
+    })
+
+    # Statusline → deep-merged into ~/.claude/settings.json
+    (mkIf (cfg.enable && themeCfg.statusline.enable) {
+      home.activation.claude-statusline-config = lib.hm.dag.entryAfter ["writeBoundary"] ''
+        settings_file="${claudeSettingsPath}"
+        managed="${statuslineConfigFile}"
+        if [ -f "$settings_file" ]; then
+          ${pkgs.jq}/bin/jq -s '.[0] * .[1]' "$settings_file" "$managed" > "$settings_file.tmp"
+          mv "$settings_file.tmp" "$settings_file"
+        else
+          mkdir -p "$(dirname "$settings_file")"
+          cp "$managed" "$settings_file"
+          chmod 644 "$settings_file"
+        fi
+      '';
     })
 
     # MCP packages → home.packages (installed to PATH)
