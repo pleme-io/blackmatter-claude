@@ -65,8 +65,10 @@ fn main() {
     // Deep merge: managed wins over existing
     let merged = deep_merge(&existing, &managed);
 
-    // Validate MCP server commands — remove entries with missing binaries
-    let cleaned = clean_stale_mcp_servers(&merged);
+    // Remove MCP servers not in the managed config (prevents stale entries
+    // from old nix generations persisting after the module that created them
+    // is removed). Also removes entries with missing binaries (GC'd paths).
+    let cleaned = clean_stale_mcp_servers(&merged, &managed);
 
     // Report what changed
     report_mcp_status(&cleaned);
@@ -106,19 +108,38 @@ fn report_mcp_status(config: &JsonValue) {
     }
 }
 
-fn clean_stale_mcp_servers(config: &JsonValue) -> JsonValue {
+fn clean_stale_mcp_servers(config: &JsonValue, managed: &JsonValue) -> JsonValue {
     let JsonValue::Object(mut root) = config.clone() else {
         return config.clone();
     };
+
+    // Collect the set of server names from the current managed config
+    let managed_names: std::collections::HashSet<String> =
+        if let JsonValue::Object(m) = managed {
+            if let Some(JsonValue::Object(ms)) = m.get("mcpServers") {
+                ms.keys().cloned().collect()
+            } else {
+                std::collections::HashSet::new()
+            }
+        } else {
+            std::collections::HashSet::new()
+        };
 
     if let Some(JsonValue::Object(mut servers)) = root.remove("mcpServers") {
         let stale: Vec<String> = servers
             .iter()
             .filter_map(|(name, entry)| {
+                // Remove servers whose binaries are missing (GC'd store paths)
                 if let JsonValue::Object(obj) = entry {
                     if let Some(JsonValue::Str(cmd)) = obj.get("command") {
                         if !command_exists(cmd) {
                             eprintln!("claude-config-merge: removing stale server '{name}' (binary missing: {cmd})");
+                            return Some(name.clone());
+                        }
+                        // Remove servers with nix store commands that aren't in the
+                        // current managed config — they're from old nix generations.
+                        if cmd.starts_with("/nix/store/") && !managed_names.contains(name) {
+                            eprintln!("claude-config-merge: removing unmanaged nix server '{name}' (not in current config)");
                             return Some(name.clone());
                         }
                     }
