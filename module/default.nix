@@ -1,14 +1,24 @@
-# Claude Code configuration — LSP, MCP servers, skills
+# Claude Code configuration — full declarative management
 #
-# Declaratively manages:
-#   ~/.claude/lsp.json  — LSP server configuration
-#   ~/.claude.json      — MCP servers (user-scope, deep-merged)
-#   ~/.claude/skills/   — Bundled + extra skills (auto-discovered)
-#   claude-code package — Centralized version management from claude-code flake
+# Declaratively manages every aspect of Claude Code's configuration:
+#   ~/.claude/settings.json     — Core settings, permissions, hooks, sandbox, attribution (deep-merged)
+#   ~/.claude/lsp.json          — LSP server configuration
+#   ~/.claude.json              — MCP servers (user-scope, deep-merged)
+#   ~/.claude/skills/           — Bundled + extra skills (auto-discovered)
+#   ~/.claude/keybindings.json  — Keyboard shortcuts
+#   ~/.claude/agents/           — Custom subagent definitions
+#   ~/.claude/output-styles/    — Custom output style definitions
+#   ~/.claude/rules/            — Instruction rules
+#   claude-code package         — Centralized version management from claude-code flake
 #
-# MCP servers: zoekt, codesearch, github, kubernetes, fluxcd, chrome-devtools, curupira, umbra, typemill
-# LSP servers: nixd, rust-analyzer, typescript-language-server,
-#   basedpyright, gopls, lua-language-server, bash-language-server, zls, ruby-lsp, clangd
+# Settings reference: https://docs.anthropic.com/en/docs/claude-code/settings
+# Hooks reference:    https://docs.anthropic.com/en/docs/claude-code/hooks
+# MCP reference:      https://docs.anthropic.com/en/docs/claude-code/mcp
+# Skills reference:   https://docs.anthropic.com/en/docs/claude-code/skills
+# Keybindings:        https://docs.anthropic.com/en/docs/claude-code/keybindings
+# Subagents:          https://docs.anthropic.com/en/docs/claude-code/sub-agents
+# Permissions:        https://docs.anthropic.com/en/docs/claude-code/permissions
+# Sandbox:            https://docs.anthropic.com/en/docs/claude-code/sandboxing
 #
 { claude-code }:
 {
@@ -19,6 +29,15 @@
 }:
 with lib; let
   cfg = config.blackmatter.components.claude;
+  settingsCfg = cfg.settings;
+  permsCfg = cfg.permissions;
+  attrCfg = cfg.attribution;
+  sandboxCfg = cfg.sandbox;
+  hooksCfg = cfg.hooks;
+  keybindingsCfg = cfg.keybindings;
+  agentsCfg = cfg.agents;
+  outputStylesCfg = cfg.outputStyles;
+  rulesCfg = cfg.rules;
   lspCfg = cfg.lsp;
   mcpCfg = cfg.mcp;
   mcpPkgsCfg = cfg.mcpPackages;
@@ -26,6 +45,17 @@ with lib; let
   themeCfg = cfg.theme;
 
   inherit (pkgs.stdenv.hostPlatform) isLinux isDarwin;
+
+  # ── Helpers ────────────────────────────────────────────────────────────
+
+  # Only include attribute if value is not null
+  optAttr = name: value: optionalAttrs (value != null) { ${name} = value; };
+
+  # Only include attribute if list is non-empty
+  optList = name: value: optionalAttrs (value != []) { ${name} = value; };
+
+  # Only include nested attrset if non-empty
+  optNested = name: value: optionalAttrs (value != {}) { ${name} = value; };
 
   # ── Bundled skills (auto-discovered from ../skills/) ────────────────
   skillsDir = ../skills;
@@ -217,8 +247,8 @@ with lib; let
   claudeConfigPath = "${config.home.homeDirectory}/.claude.json";
 
   # ── Config merge tool (Rust, zero deps) ─────────────────────────────
-  # Replaces the jq-based activation script. Deep-merges managed MCP config
-  # into ~/.claude.json and removes entries with missing binaries (GC'd paths).
+  # Deep-merges Nix-managed JSON into user config files and removes
+  # stale entries with missing binaries (GC'd nix store paths).
   configMergeBinary = pkgs.runCommand "claude-config-merge" {
     nativeBuildInputs = [ pkgs.rustc pkgs.stdenv.cc ];
   } ''
@@ -234,15 +264,112 @@ with lib; let
     rustc --edition 2021 -O -o $out/bin/claude-nord-statusline ${./statusline.rs}
   '';
 
-  statuslineConfigFile = pkgs.writeText "claude-statusline-config.json"
-    (builtins.toJSON {
+  # ── Managed settings (deep-merged into ~/.claude/settings.json) ─────
+  #
+  # Assembles all typed Nix options into a JSON blob that gets deep-merged
+  # into the user's ~/.claude/settings.json. Only includes non-null/non-empty
+  # values so Nix-managed settings coexist with manual user settings.
+
+  permsObj =
+    {}
+    // optAttr "defaultMode" permsCfg.defaultMode
+    // optList "allow" permsCfg.allow
+    // optList "deny" permsCfg.deny
+    // optList "ask" permsCfg.ask
+    // optList "additionalDirectories" permsCfg.additionalDirectories;
+
+  attrObj =
+    {}
+    // optAttr "commit" attrCfg.commit
+    // optAttr "pr" attrCfg.pr;
+
+  sandboxFsObj =
+    {}
+    // optList "allowWrite" sandboxCfg.filesystem.allowWrite
+    // optList "denyWrite" sandboxCfg.filesystem.denyWrite
+    // optList "denyRead" sandboxCfg.filesystem.denyRead;
+
+  sandboxNetObj =
+    {}
+    // optList "allowUnixSockets" sandboxCfg.network.allowUnixSockets
+    // optAttr "allowAllUnixSockets" sandboxCfg.network.allowAllUnixSockets
+    // optAttr "allowLocalBinding" sandboxCfg.network.allowLocalBinding
+    // optList "allowedDomains" sandboxCfg.network.allowedDomains;
+
+  sandboxObj =
+    {}
+    // optAttr "enabled" sandboxCfg.enabled
+    // optAttr "autoAllowBashIfSandboxed" sandboxCfg.autoAllowBashIfSandboxed
+    // optList "excludedCommands" sandboxCfg.excludedCommands
+    // optAttr "allowUnsandboxedCommands" sandboxCfg.allowUnsandboxedCommands
+    // optAttr "enableWeakerNestedSandbox" sandboxCfg.enableWeakerNestedSandbox
+    // optAttr "enableWeakerNetworkIsolation" sandboxCfg.enableWeakerNetworkIsolation
+    // optNested "filesystem" sandboxFsObj
+    // optNested "network" sandboxNetObj;
+
+  managedSettings =
+    {}
+    # Core settings
+    // optAttr "model" settingsCfg.model
+    // optAttr "effortLevel" settingsCfg.effortLevel
+    // optAttr "language" settingsCfg.language
+    // optAttr "outputStyle" settingsCfg.outputStyle
+    // optAttr "apiKeyHelper" settingsCfg.apiKeyHelper
+    // optAttr "cleanupPeriodDays" settingsCfg.cleanupPeriodDays
+    // optAttr "autoMemoryEnabled" settingsCfg.autoMemoryEnabled
+    // optAttr "alwaysThinkingEnabled" settingsCfg.alwaysThinkingEnabled
+    // optAttr "includeGitInstructions" settingsCfg.includeGitInstructions
+    // optAttr "fastModePerSessionOptIn" settingsCfg.fastModePerSessionOptIn
+    // optAttr "autoUpdatesChannel" settingsCfg.autoUpdatesChannel
+    // optAttr "plansDirectory" settingsCfg.plansDirectory
+    // optList "claudeMdExcludes" settingsCfg.claudeMdExcludes
+    // optNested "env" settingsCfg.env
+    // optList "companyAnnouncements" settingsCfg.companyAnnouncements
+    // optList "availableModels" settingsCfg.availableModels
+    # UI settings
+    // optAttr "showTurnDuration" settingsCfg.showTurnDuration
+    // optAttr "terminalProgressBarEnabled" settingsCfg.terminalProgressBarEnabled
+    // optAttr "prefersReducedMotion" settingsCfg.prefersReducedMotion
+    // optAttr "spinnerTipsEnabled" settingsCfg.spinnerTipsEnabled
+    // optAttr "respectGitignore" settingsCfg.respectGitignore
+    // optAttr "skipDangerousModePermissionPrompt" settingsCfg.skipDangerousModePermissionPrompt
+    // optAttr "disableAllHooks" settingsCfg.disableAllHooks
+    // optAttr "enableAllProjectMcpServers" settingsCfg.enableAllProjectMcpServers
+    // optList "enabledMcpjsonServers" settingsCfg.enabledMcpjsonServers
+    // optList "disabledMcpjsonServers" settingsCfg.disabledMcpjsonServers
+    // optAttr "teammateMode" settingsCfg.teammateMode
+    # Auth
+    // optAttr "forceLoginMethod" settingsCfg.forceLoginMethod
+    // optAttr "forceLoginOrgUUID" settingsCfg.forceLoginOrgUUID
+    # Nested objects
+    // optNested "permissions" permsObj
+    // optNested "attribution" attrObj
+    // optNested "sandbox" sandboxObj
+    // optNested "hooks" hooksCfg
+    # Statusline
+    // optionalAttrs themeCfg.statusline.enable {
       statusLine = {
         type = "command";
         command = "${statuslineBinary}/bin/claude-nord-statusline";
       };
-    });
+    }
+    # Escape hatch
+    // settingsCfg.extraSettings;
+
+  hasManagedSettings = managedSettings != {};
+  managedSettingsFile = pkgs.writeText "claude-managed-settings.json"
+    (builtins.toJSON managedSettings);
 
   claudeSettingsPath = "${config.home.homeDirectory}/.claude/settings.json";
+
+  # ── Keybindings JSON ─────────────────────────────────────────────────
+  keybindingsJson =
+    { bindings = map (context: {
+        inherit context;
+        bindings = keybindingsCfg.bindings.${context};
+      }) (attrNames keybindingsCfg.bindings);
+    };
+
 in {
   options.blackmatter.components.claude = {
     enable = mkEnableOption "Claude Code configuration";
@@ -255,6 +382,696 @@ in {
         Claude Code package to install. Defaults to the latest version from the
         claude-code flake input, ensuring consistent updates across all nodes.
       '';
+    };
+
+    # ── Core settings ──────────────────────────────────────────────────
+    # All options map to keys in ~/.claude/settings.json (user scope).
+    # Settings are deep-merged: Nix-managed values coexist with manual edits.
+    # Null values are omitted (not written to JSON).
+
+    settings = {
+      model = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "opus";
+        description = ''
+          Default model for Claude Code sessions. Accepts aliases (opus, sonnet,
+          haiku) or full model names (claude-opus-4-6). Can also use special values
+          like "sonnet[1m]" for 1M context or "opusplan" for plan-mode switching.
+          Override per-session with /model or --model flag.
+        '';
+      };
+
+      effortLevel = mkOption {
+        type = types.nullOr (types.enum ["low" "medium" "high"]);
+        default = null;
+        example = "high";
+        description = ''
+          Reasoning effort level. "low" = faster/cheaper, "high" = more thorough.
+          Override with CLAUDE_CODE_EFFORT_LEVEL env var.
+        '';
+      };
+
+      language = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "en";
+        description = "Preferred language for Claude's responses.";
+      };
+
+      outputStyle = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "Explanatory";
+        description = ''
+          Output style name. Built-in: "Default", "Explanatory", "Learning".
+          Custom styles: add .md files to ~/.claude/output-styles/ or use the
+          outputStyles option in this module.
+        '';
+      };
+
+      apiKeyHelper = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = ''
+          Path to a script that outputs an authentication token on stdout.
+          Called before each API request. Useful for rotating credentials.
+        '';
+      };
+
+      cleanupPeriodDays = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+        example = 30;
+        description = "Number of days before old sessions are automatically deleted.";
+      };
+
+      autoMemoryEnabled = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = ''
+          Enable/disable auto memory (MEMORY.md persistence across sessions).
+          Override with CLAUDE_CODE_DISABLE_AUTO_MEMORY env var.
+        '';
+      };
+
+      alwaysThinkingEnabled = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = ''
+          Enable extended thinking (chain-of-thought reasoning) by default.
+          When enabled, Claude uses more tokens but produces better results
+          for complex tasks. Toggle per-session with Cmd+T.
+        '';
+      };
+
+      includeGitInstructions = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = ''
+          Include git workflow instructions in the system prompt (default: true).
+          Disable to reduce prompt size in non-git environments.
+        '';
+      };
+
+      fastModePerSessionOptIn = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = ''
+          Require per-session opt-in for fast mode (/fast). When true,
+          fast mode must be explicitly enabled each session.
+        '';
+      };
+
+      autoUpdatesChannel = mkOption {
+        type = types.nullOr (types.enum ["stable" "latest"]);
+        default = null;
+        description = ''
+          Auto-update channel. "stable" for production releases, "latest" for
+          bleeding edge. Irrelevant when using Nix-managed package.
+        '';
+      };
+
+      plansDirectory = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Custom directory for plan file storage.";
+      };
+
+      claudeMdExcludes = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        example = ["vendor/" "node_modules/"];
+        description = ''
+          Glob patterns to exclude CLAUDE.md files from being loaded.
+          Useful for skipping vendored or third-party CLAUDE.md files.
+        '';
+      };
+
+      env = mkOption {
+        type = types.attrsOf types.str;
+        default = {};
+        example = {
+          ANTHROPIC_MODEL = "opus";
+          CLAUDE_CODE_EFFORT_LEVEL = "high";
+        };
+        description = ''
+          Environment variables set for all Claude Code sessions. These are
+          injected into every session's environment. Useful for API keys,
+          model overrides, and feature flags.
+
+          Common variables:
+            ANTHROPIC_API_KEY — API key
+            ANTHROPIC_MODEL — model override
+            CLAUDE_CODE_EFFORT_LEVEL — low/medium/high
+            CLAUDE_CODE_MAX_OUTPUT_TOKENS — max output tokens (default 32000, max 64000)
+            CLAUDE_CODE_SHELL — override shell detection
+            CLAUDE_CODE_USE_BEDROCK — use Amazon Bedrock
+            CLAUDE_CODE_USE_VERTEX — use Google Vertex AI
+            CLAUDE_CODE_DISABLE_AUTO_MEMORY — disable auto memory
+            CLAUDE_CODE_DISABLE_FAST_MODE — disable fast mode
+            MCP_TIMEOUT — MCP server startup timeout (ms)
+            MAX_MCP_OUTPUT_TOKENS — max MCP tool output tokens (default 25000)
+        '';
+      };
+
+      companyAnnouncements = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        description = "Announcements shown in random rotation during sessions.";
+      };
+
+      availableModels = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        example = ["opus" "sonnet"];
+        description = ''
+          Restrict which models users can select. When non-empty, only these
+          models appear in the model picker. Accepts aliases and full names.
+        '';
+      };
+
+      # ── UI settings ──
+
+      showTurnDuration = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Show duration of each turn in the conversation (default: true).";
+      };
+
+      terminalProgressBarEnabled = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Show progress bar in terminal during long operations (default: true).";
+      };
+
+      prefersReducedMotion = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Reduce UI animations for accessibility.";
+      };
+
+      spinnerTipsEnabled = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Show tips in the loading spinner (default: true).";
+      };
+
+      respectGitignore = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Respect .gitignore patterns in the file picker (default: true).";
+      };
+
+      skipDangerousModePermissionPrompt = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Skip the confirmation prompt when entering bypass-permissions mode.";
+      };
+
+      disableAllHooks = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Disable all hooks and the status line command.";
+      };
+
+      enableAllProjectMcpServers = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Auto-approve all project-level MCP servers from .mcp.json files.";
+      };
+
+      enabledMcpjsonServers = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        description = "Specific .mcp.json server names to auto-approve.";
+      };
+
+      disabledMcpjsonServers = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        description = "Specific .mcp.json server names to reject.";
+      };
+
+      teammateMode = mkOption {
+        type = types.nullOr (types.enum ["auto" "in-process" "tmux"]);
+        default = null;
+        description = ''
+          Agent teams execution mode.
+            auto — Claude chooses (default)
+            in-process — teammates run as subprocesses
+            tmux — teammates run in tmux panes (visible, debuggable)
+        '';
+      };
+
+      # ── Auth settings ──
+
+      forceLoginMethod = mkOption {
+        type = types.nullOr (types.enum ["claudeai" "console"]);
+        default = null;
+        description = ''
+          Force a specific login method. "claudeai" for claude.ai accounts,
+          "console" for Anthropic API Console accounts.
+        '';
+      };
+
+      forceLoginOrgUUID = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Auto-select organization by UUID during login.";
+      };
+
+      # ── Escape hatch ──
+
+      extraSettings = mkOption {
+        type = types.attrs;
+        default = {};
+        description = ''
+          Arbitrary additional keys to merge into ~/.claude/settings.json.
+          Use this for new or undocumented settings not yet exposed as typed options.
+          These are deep-merged with all other managed settings.
+        '';
+      };
+    };
+
+    # ── Permissions ────────────────────────────────────────────────────
+    # Controls which tools Claude can use and how.
+    # Rules use the format: "Tool" or "Tool(specifier)" with glob * support.
+    #
+    # Examples:
+    #   "Bash"                    — all bash commands
+    #   "Bash(npm run *)"         — commands starting with "npm run"
+    #   "Edit(/src/**)"           — editing files under src/
+    #   "Read(./.env)"            — reading .env in project root
+    #   "WebFetch(domain:*.com)"  — fetch to .com domains
+    #   "mcp__github__*"          — all GitHub MCP tools
+    #
+    # Path prefixes: // = absolute, ~/ = home-relative, / = project-relative
+    # Evaluation order: deny (first match) → ask → allow
+
+    permissions = {
+      defaultMode = mkOption {
+        type = types.nullOr (types.enum [
+          "default" "acceptEdits" "plan" "dontAsk" "bypassPermissions"
+        ]);
+        default = null;
+        description = ''
+          Default permission mode for new sessions.
+            default — ask for dangerous operations
+            acceptEdits — auto-approve file edits, ask for bash
+            plan — read-only, no edits or commands
+            dontAsk — auto-approve everything (still sandboxed)
+            bypassPermissions — no restrictions (dangerous)
+        '';
+      };
+
+      allow = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        example = [
+          "Bash(npm run *)"
+          "Edit(/src/**)"
+          "mcp__github__*"
+        ];
+        description = ''
+          Tool patterns to auto-approve without prompting.
+          Merged (unioned) across all settings scopes.
+        '';
+      };
+
+      deny = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        example = [
+          "Bash(rm -rf *)"
+          "Read(./.env)"
+        ];
+        description = ''
+          Tool patterns to block entirely. Deny rules are checked first
+          and take priority over allow/ask rules.
+          Merged (unioned) across all settings scopes.
+        '';
+      };
+
+      ask = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        description = ''
+          Tool patterns that always require user confirmation,
+          even if they would otherwise be auto-approved.
+          Merged (unioned) across all settings scopes.
+        '';
+      };
+
+      additionalDirectories = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        example = ["/tmp/builds" "~/shared"];
+        description = ''
+          Extra directories Claude Code can access beyond the project root.
+          Equivalent to --add-dir CLI flag.
+        '';
+      };
+    };
+
+    # ── Attribution ────────────────────────────────────────────────────
+
+    attribution = {
+      commit = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "Generated with Claude Code";
+        description = "Text appended to git commit messages for attribution.";
+      };
+
+      pr = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "Generated with Claude Code";
+        description = "Text appended to pull request descriptions for attribution.";
+      };
+    };
+
+    # ── Sandbox ────────────────────────────────────────────────────────
+    # Restricts filesystem and network access for bash commands.
+    #
+    # Path prefixes:
+    #   // — absolute from filesystem root
+    #   ~/ — relative to home directory
+    #   /  — relative to settings file location
+    #   ./ — resolved at runtime (cwd-relative)
+
+    sandbox = {
+      enabled = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Enable command sandboxing (default: false). Restricts filesystem and network access.";
+      };
+
+      autoAllowBashIfSandboxed = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Auto-approve all bash commands when sandbox is enabled (default: true).";
+      };
+
+      excludedCommands = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        example = ["docker" "kubectl"];
+        description = "Commands that run outside the sandbox even when sandboxing is enabled.";
+      };
+
+      allowUnsandboxedCommands = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Allow tools to use dangerouslyDisableSandbox escape hatch (default: true).";
+      };
+
+      enableWeakerNestedSandbox = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Use weaker sandbox inside Docker/containers where full sandboxing is unavailable.";
+      };
+
+      enableWeakerNetworkIsolation = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = "Allow TLS trust service access on macOS (needed for some network operations).";
+      };
+
+      filesystem = {
+        allowWrite = mkOption {
+          type = types.listOf types.str;
+          default = [];
+          example = ["~/tmp" "/tmp/builds"];
+          description = "Paths where write access is allowed. Merged across settings scopes.";
+        };
+
+        denyWrite = mkOption {
+          type = types.listOf types.str;
+          default = [];
+          example = ["~/.ssh" "~/.gnupg"];
+          description = "Paths where write access is denied. Merged across settings scopes.";
+        };
+
+        denyRead = mkOption {
+          type = types.listOf types.str;
+          default = [];
+          example = ["~/.ssh/id_*" "~/.gnupg"];
+          description = "Paths where read access is denied. Merged across settings scopes.";
+        };
+      };
+
+      network = {
+        allowUnixSockets = mkOption {
+          type = types.listOf types.str;
+          default = [];
+          description = "Unix socket paths that sandboxed commands can access. Merged across scopes.";
+        };
+
+        allowAllUnixSockets = mkOption {
+          type = types.nullOr types.bool;
+          default = null;
+          description = "Allow access to all Unix sockets (overrides allowUnixSockets list).";
+        };
+
+        allowLocalBinding = mkOption {
+          type = types.nullOr types.bool;
+          default = null;
+          description = "Allow binding to localhost ports (macOS sandbox).";
+        };
+
+        allowedDomains = mkOption {
+          type = types.listOf types.str;
+          default = [];
+          example = ["api.github.com" "*.anthropic.com"];
+          description = "Domain allowlist for outbound network traffic. Merged across scopes.";
+        };
+      };
+    };
+
+    # ── Hooks ──────────────────────────────────────────────────────────
+    # Lifecycle event handlers that run shell commands, HTTP requests,
+    # or LLM prompts at specific points in Claude Code's execution.
+    #
+    # Structure: { EventName = [ { matcher = "..."; hooks = [ hookEntry ]; } ]; }
+    #
+    # Hook events:
+    #   PreToolUse         — before tool executes (can block with exit 2)
+    #   PostToolUse        — after tool succeeds
+    #   PostToolUseFailure — after tool fails
+    #   UserPromptSubmit   — user submits a prompt
+    #   Stop               — Claude finishes responding
+    #   SessionStart       — session begins (matcher: startup/resume/clear/compact)
+    #   SessionEnd         — session terminates
+    #   Notification       — Claude sends notification
+    #   SubagentStart      — subagent spawned
+    #   SubagentStop       — subagent finishes
+    #   TaskCompleted      — task marked complete
+    #   InstructionsLoaded — CLAUDE.md/rules loaded
+    #   ConfigChange       — config file changes
+    #   WorktreeCreate     — git worktree being created
+    #   WorktreeRemove     — git worktree being removed
+    #   PreCompact         — before context compaction
+    #   PermissionRequest  — permission dialog appears
+    #   TeammateIdle       — teammate about to idle
+    #
+    # Hook entry types:
+    #   command — { type = "command"; command = "path/to/script.sh"; timeout = 600; }
+    #   http    — { type = "http"; url = "https://..."; method = "POST"; headers = {}; }
+    #   prompt  — { type = "prompt"; prompt = "Check if..."; model = "haiku"; }
+    #   agent   — { type = "agent"; prompt = "Verify tests pass. $ARGUMENTS"; timeout = 120; }
+    #
+    # Exit codes (command hooks):
+    #   0 — proceed (stdout added to context for SessionStart/UserPromptSubmit)
+    #   2 — block action (stderr fed back to Claude as feedback)
+    #   other — proceed (stderr logged but not shown)
+    #
+    # Example:
+    #   hooks.PreToolUse = [{
+    #     matcher = "Bash";
+    #     hooks = [{ type = "command"; command = "/path/to/validator.sh"; }];
+    #   }];
+
+    hooks = mkOption {
+      type = types.attrsOf (types.listOf types.attrs);
+      default = {};
+      example = {
+        PreToolUse = [{
+          matcher = "Bash";
+          hooks = [{ type = "command"; command = "/path/to/validate.sh"; }];
+        }];
+        Stop = [{
+          hooks = [{ type = "command"; command = "/path/to/on-stop.sh"; }];
+        }];
+      };
+      description = ''
+        Lifecycle hooks mapped to Claude Code events. Each event maps to a list
+        of rule objects. Each rule has an optional matcher (tool/event name pattern)
+        and a hooks list containing hook entries.
+        See option description above for complete event list and hook types.
+      '';
+    };
+
+    # ── Keybindings ────────────────────────────────────────────────────
+    # Custom keyboard shortcuts deployed to ~/.claude/keybindings.json.
+    #
+    # Contexts: Global, Chat, Autocomplete, Settings, Confirmation, Tabs,
+    #   Help, Transcript, HistorySearch, Task, ThemePicker, Attachments,
+    #   Footer, MessageSelector, DiffDialog, ModelPicker, Select, Plugin
+    #
+    # Common actions:
+    #   app:interrupt (Ctrl+C), app:exit (Ctrl+D), app:toggleTodos (Ctrl+T),
+    #   app:toggleTranscript (Ctrl+O), chat:submit (Enter), chat:cycleMode (Shift+Tab),
+    #   chat:modelPicker (Cmd+P), chat:thinkingToggle (Cmd+T),
+    #   chat:externalEditor (Ctrl+G), chat:stash (Ctrl+S),
+    #   chat:imagePaste (Ctrl+V), history:search (Ctrl+R), task:background (Ctrl+B)
+    #
+    # Set action to null to unbind a key. Reserved: Ctrl+C, Ctrl+D (cannot rebind).
+    # Keystroke syntax: ctrl/alt/shift/meta + key, chords: "ctrl+k ctrl+s"
+
+    keybindings = {
+      enable = mkOption {
+        type = types.bool;
+        default = false;
+        description = "Deploy custom keybindings to ~/.claude/keybindings.json.";
+      };
+
+      bindings = mkOption {
+        type = types.attrsOf (types.attrsOf (types.nullOr types.str));
+        default = {};
+        example = {
+          Chat = {
+            "ctrl+e" = "chat:externalEditor";
+            "ctrl+u" = null;
+          };
+          Global = {
+            "ctrl+t" = "app:toggleTodos";
+          };
+        };
+        description = ''
+          Keybinding overrides organized by context. Keys are context names
+          (Chat, Global, etc.), values are maps of keystroke → action.
+          Set action to null to unbind a key.
+        '';
+      };
+    };
+
+    # ── Subagents ──────────────────────────────────────────────────────
+    # Custom subagent definitions deployed to ~/.claude/agents/.
+    # Each agent is a .md file with YAML frontmatter defining its behavior.
+    #
+    # Frontmatter fields:
+    #   name          — unique identifier (required)
+    #   description   — when to delegate (required)
+    #   tools         — allowlist of tools
+    #   disallowedTools — denylist of tools
+    #   model         — sonnet/opus/haiku/inherit (default: inherit)
+    #   permissionMode — default/acceptEdits/dontAsk/bypassPermissions/plan
+    #   maxTurns      — max agentic turns
+    #   skills        — skills to preload
+    #   mcpServers    — MCP servers for this agent
+    #   hooks         — lifecycle hooks
+    #   memory        — user/project/local
+    #   background    — true to always run in background
+    #   isolation     — "worktree" for isolated git worktree
+    #
+    # Built-in agents: Explore (read-only search), Plan (research),
+    #   general-purpose (full tools), Bash (terminal), statusline-setup,
+    #   Claude Code Guide (help queries)
+
+    agents = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy custom subagent definitions to ~/.claude/agents/.";
+      };
+
+      definitions = mkOption {
+        type = types.attrsOf types.path;
+        default = {};
+        example = literalExpression ''
+          {
+            test-runner = ./agents/test-runner.md;
+            code-reviewer = ./agents/code-reviewer.md;
+          }
+        '';
+        description = ''
+          Custom subagent definitions. Keys are agent names (without .md extension),
+          values are paths to markdown files with YAML frontmatter.
+          Deployed to ~/.claude/agents/{name}.md.
+        '';
+      };
+    };
+
+    # ── Output styles ──────────────────────────────────────────────────
+    # Custom output style definitions deployed to ~/.claude/output-styles/.
+    # Each style is a .md file with optional YAML frontmatter.
+    #
+    # Frontmatter fields:
+    #   name                   — display name
+    #   description            — brief description
+    #   keep-coding-instructions — false to replace default coding behavior (default: true)
+
+    outputStyles = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy custom output styles to ~/.claude/output-styles/.";
+      };
+
+      definitions = mkOption {
+        type = types.attrsOf types.path;
+        default = {};
+        example = literalExpression ''
+          { concise = ./output-styles/concise.md; }
+        '';
+        description = ''
+          Custom output style definitions. Keys are style names (without .md extension),
+          values are paths to markdown files. Select with settings.outputStyle or /output-style.
+          Deployed to ~/.claude/output-styles/{name}.md.
+        '';
+      };
+    };
+
+    # ── Rules ──────────────────────────────────────────────────────────
+    # User-level instruction rules deployed to ~/.claude/rules/.
+    # Each rule is a .md file, optionally with YAML frontmatter for path scoping.
+    #
+    # Rules without paths frontmatter are loaded unconditionally at session start.
+    # Rules with paths are lazy-loaded when matching files are opened.
+    #
+    # Frontmatter example:
+    #   ---
+    #   paths:
+    #     - "src/api/**/*.ts"
+    #     - "**/*.{ts,tsx}"
+    #   ---
+    #
+    # @path/to/file syntax imports and expands referenced files (max 5 hops).
+
+    rules = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy instruction rules to ~/.claude/rules/.";
+      };
+
+      definitions = mkOption {
+        type = types.attrsOf types.path;
+        default = {};
+        example = literalExpression ''
+          {
+            security = ./rules/security.md;
+            api-conventions = ./rules/api-conventions.md;
+          }
+        '';
+        description = ''
+          Instruction rule files. Keys are rule names (without .md extension),
+          values are paths to markdown files. Deployed to ~/.claude/rules/{name}.md.
+          Rules without paths frontmatter are unconditional; with paths they're path-scoped.
+        '';
+      };
     };
 
     # ── LSP options ────────────────────────────────────────────────────
@@ -777,14 +1594,48 @@ in {
       ) allSkillFiles;
     })
 
-    # Statusline → deep-merged into ~/.claude/settings.json
-    (mkIf (cfg.enable && themeCfg.statusline.enable) {
-      home.activation.claude-statusline-config = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    # Settings → deep-merged into ~/.claude/settings.json
+    # Consolidates all settings: core, permissions, hooks, sandbox,
+    # attribution, statusline, and extraSettings into a single merge.
+    (mkIf (cfg.enable && hasManagedSettings) {
+      home.activation.claude-settings-config = lib.hm.dag.entryAfter ["writeBoundary"] ''
         run mkdir -p "$(dirname "${claudeSettingsPath}")"
         run ${configMergeBinary}/bin/claude-config-merge \
-          "${statuslineConfigFile}" \
+          "${managedSettingsFile}" \
           --config "${claudeSettingsPath}"
       '';
+    })
+
+    # Keybindings → ~/.claude/keybindings.json
+    (mkIf (cfg.enable && keybindingsCfg.enable && keybindingsCfg.bindings != {}) {
+      home.file.".claude/keybindings.json".text = builtins.toJSON keybindingsJson;
+    })
+
+    # Subagents → ~/.claude/agents/{name}.md
+    (mkIf (cfg.enable && agentsCfg.enable && agentsCfg.definitions != {}) {
+      home.file = lib.mapAttrs' (name: path:
+        lib.nameValuePair ".claude/agents/${name}.md" {
+          source = path;
+        }
+      ) agentsCfg.definitions;
+    })
+
+    # Output styles → ~/.claude/output-styles/{name}.md
+    (mkIf (cfg.enable && outputStylesCfg.enable && outputStylesCfg.definitions != {}) {
+      home.file = lib.mapAttrs' (name: path:
+        lib.nameValuePair ".claude/output-styles/${name}.md" {
+          source = path;
+        }
+      ) outputStylesCfg.definitions;
+    })
+
+    # Rules → ~/.claude/rules/{name}.md
+    (mkIf (cfg.enable && rulesCfg.enable && rulesCfg.definitions != {}) {
+      home.file = lib.mapAttrs' (name: path:
+        lib.nameValuePair ".claude/rules/${name}.md" {
+          source = path;
+        }
+      ) rulesCfg.definitions;
     })
 
     # MCP packages → home.packages (installed to PATH)
