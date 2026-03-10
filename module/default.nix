@@ -267,8 +267,11 @@ with lib; let
   # ── Managed settings (deep-merged into ~/.claude/settings.json) ─────
   #
   # Assembles all typed Nix options into a JSON blob that gets deep-merged
-  # into the user's ~/.claude/settings.json. Only includes non-null/non-empty
-  # values so Nix-managed settings coexist with manual user settings.
+  # into the user's ~/.claude/settings.json.
+  #
+  # Settings with confirmed defaults are ALWAYS written (fully explicit config).
+  # Settings without defaults (nullOr) are only written when explicitly set.
+  # Lists are only written when non-empty.
 
   permsObj =
     {}
@@ -290,61 +293,67 @@ with lib; let
     // optList "denyRead" sandboxCfg.filesystem.denyRead;
 
   sandboxNetObj =
-    {}
+    {
+      # Confirmed defaults — always written
+      inherit (sandboxCfg.network) allowAllUnixSockets allowLocalBinding;
+    }
     // optList "allowUnixSockets" sandboxCfg.network.allowUnixSockets
-    // optAttr "allowAllUnixSockets" sandboxCfg.network.allowAllUnixSockets
-    // optAttr "allowLocalBinding" sandboxCfg.network.allowLocalBinding
     // optList "allowedDomains" sandboxCfg.network.allowedDomains;
 
   sandboxObj =
-    {}
-    // optAttr "enabled" sandboxCfg.enabled
-    // optAttr "autoAllowBashIfSandboxed" sandboxCfg.autoAllowBashIfSandboxed
+    {
+      # Confirmed defaults — always written
+      inherit (sandboxCfg) enabled autoAllowBashIfSandboxed
+        allowUnsandboxedCommands enableWeakerNestedSandbox
+        enableWeakerNetworkIsolation;
+    }
     // optList "excludedCommands" sandboxCfg.excludedCommands
-    // optAttr "allowUnsandboxedCommands" sandboxCfg.allowUnsandboxedCommands
-    // optAttr "enableWeakerNestedSandbox" sandboxCfg.enableWeakerNestedSandbox
-    // optAttr "enableWeakerNetworkIsolation" sandboxCfg.enableWeakerNetworkIsolation
     // optNested "filesystem" sandboxFsObj
     // optNested "network" sandboxNetObj;
 
   managedSettings =
-    {}
-    # Core settings
+    {
+      # ── Confirmed defaults (always written to settings.json) ──
+      # These match Claude Code's built-in defaults per the JSON schema.
+      # Setting them explicitly makes the config fully reproducible and
+      # visible at the Nix layer without consulting external docs.
+      inherit (settingsCfg)
+        showTurnDuration              # true
+        terminalProgressBarEnabled    # true
+        spinnerTipsEnabled            # true
+        respectGitignore              # true
+        includeGitInstructions        # true
+        autoMemoryEnabled             # true
+        cleanupPeriodDays             # 30
+        fastModePerSessionOptIn       # false
+        prefersReducedMotion          # false
+        disableAllHooks               # false
+        enableAllProjectMcpServers    # false
+        teammateMode;                 # "auto"
+    }
+    # ── No confirmed default (only written when explicitly set) ──
     // optAttr "model" settingsCfg.model
     // optAttr "effortLevel" settingsCfg.effortLevel
     // optAttr "language" settingsCfg.language
     // optAttr "outputStyle" settingsCfg.outputStyle
     // optAttr "apiKeyHelper" settingsCfg.apiKeyHelper
-    // optAttr "cleanupPeriodDays" settingsCfg.cleanupPeriodDays
-    // optAttr "autoMemoryEnabled" settingsCfg.autoMemoryEnabled
     // optAttr "alwaysThinkingEnabled" settingsCfg.alwaysThinkingEnabled
-    // optAttr "includeGitInstructions" settingsCfg.includeGitInstructions
-    // optAttr "fastModePerSessionOptIn" settingsCfg.fastModePerSessionOptIn
     // optAttr "autoUpdatesChannel" settingsCfg.autoUpdatesChannel
     // optAttr "plansDirectory" settingsCfg.plansDirectory
     // optList "claudeMdExcludes" settingsCfg.claudeMdExcludes
     // optNested "env" settingsCfg.env
     // optList "companyAnnouncements" settingsCfg.companyAnnouncements
     // optList "availableModels" settingsCfg.availableModels
-    # UI settings
-    // optAttr "showTurnDuration" settingsCfg.showTurnDuration
-    // optAttr "terminalProgressBarEnabled" settingsCfg.terminalProgressBarEnabled
-    // optAttr "prefersReducedMotion" settingsCfg.prefersReducedMotion
-    // optAttr "spinnerTipsEnabled" settingsCfg.spinnerTipsEnabled
-    // optAttr "respectGitignore" settingsCfg.respectGitignore
     // optAttr "skipDangerousModePermissionPrompt" settingsCfg.skipDangerousModePermissionPrompt
-    // optAttr "disableAllHooks" settingsCfg.disableAllHooks
-    // optAttr "enableAllProjectMcpServers" settingsCfg.enableAllProjectMcpServers
     // optList "enabledMcpjsonServers" settingsCfg.enabledMcpjsonServers
     // optList "disabledMcpjsonServers" settingsCfg.disabledMcpjsonServers
-    // optAttr "teammateMode" settingsCfg.teammateMode
     # Auth
     // optAttr "forceLoginMethod" settingsCfg.forceLoginMethod
     // optAttr "forceLoginOrgUUID" settingsCfg.forceLoginOrgUUID
     # Nested objects
     // optNested "permissions" permsObj
     // optNested "attribution" attrObj
-    // optNested "sandbox" sandboxObj
+    // { sandbox = sandboxObj; }
     // optNested "hooks" hooksCfg
     # Statusline
     // optionalAttrs themeCfg.statusline.enable {
@@ -387,7 +396,10 @@ in {
     # ── Core settings ──────────────────────────────────────────────────
     # All options map to keys in ~/.claude/settings.json (user scope).
     # Settings are deep-merged: Nix-managed values coexist with manual edits.
-    # Null values are omitted (not written to JSON).
+    #
+    # Settings with confirmed Claude defaults use real types with real defaults
+    # (always written to settings.json — fully explicit, visible at Nix layer).
+    # Settings without confirmed defaults use nullOr (omitted when null).
 
     settings = {
       model = mkOption {
@@ -395,10 +407,11 @@ in {
         default = null;
         example = "opus";
         description = ''
-          Default model for Claude Code sessions. Accepts aliases (opus, sonnet,
-          haiku) or full model names (claude-opus-4-6). Can also use special values
-          like "sonnet[1m]" for 1M context or "opusplan" for plan-mode switching.
-          Override per-session with /model or --model flag.
+          Default model for Claude Code sessions. No fixed default — subscription-dependent:
+          Max/Team Premium → Opus 4.6, Pro/Team Standard → Sonnet 4.6.
+          Accepts aliases (opus, sonnet, haiku) or full model names (claude-opus-4-6).
+          Special values: "sonnet[1m]" (1M context), "opusplan" (plan-mode switching).
+          Override per-session with /model or --model flag. Leave null for auto-detection.
         '';
       };
 
@@ -408,6 +421,8 @@ in {
         example = "high";
         description = ''
           Reasoning effort level. "low" = faster/cheaper, "high" = more thorough.
+          Claude schema default: "high", but runtime behavior is subscription-dependent
+          (Opus on Max/Team may default to "medium"). Leave null for auto-detection.
           Override with CLAUDE_CODE_EFFORT_LEVEL env var.
         '';
       };
@@ -440,17 +455,16 @@ in {
       };
 
       cleanupPeriodDays = mkOption {
-        type = types.nullOr types.int;
-        default = null;
-        example = 30;
-        description = "Number of days before old sessions are automatically deleted.";
+        type = types.int;
+        default = 30;
+        description = "Number of days before old sessions are automatically deleted (Claude default: 30). Set 0 to disable.";
       };
 
       autoMemoryEnabled = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
+        type = types.bool;
+        default = true;
         description = ''
-          Enable/disable auto memory (MEMORY.md persistence across sessions).
+          Enable auto memory (MEMORY.md persistence across sessions). Claude default: true.
           Override with CLAUDE_CODE_DISABLE_AUTO_MEMORY env var.
         '';
       };
@@ -466,20 +480,20 @@ in {
       };
 
       includeGitInstructions = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
+        type = types.bool;
+        default = true;
         description = ''
-          Include git workflow instructions in the system prompt (default: true).
+          Include git workflow instructions in the system prompt. Claude default: true.
           Disable to reduce prompt size in non-git environments.
         '';
       };
 
       fastModePerSessionOptIn = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
+        type = types.bool;
+        default = false;
         description = ''
-          Require per-session opt-in for fast mode (/fast). When true,
-          fast mode must be explicitly enabled each session.
+          Require per-session opt-in for fast mode (/fast). Claude default: false.
+          When true, fast mode must be explicitly enabled each session.
         '';
       };
 
@@ -554,51 +568,55 @@ in {
       # ── UI settings ──
 
       showTurnDuration = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
-        description = "Show duration of each turn in the conversation (default: true).";
+        type = types.bool;
+        default = true;
+        description = "Show duration of each turn in the conversation. Claude default: true.";
       };
 
       terminalProgressBarEnabled = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
-        description = "Show progress bar in terminal during long operations (default: true).";
+        type = types.bool;
+        default = true;
+        description = "Show progress bar in terminal during long operations. Claude default: true.";
       };
 
       prefersReducedMotion = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
-        description = "Reduce UI animations for accessibility.";
+        type = types.bool;
+        default = false;
+        description = "Reduce UI animations for accessibility. Claude default: false.";
       };
 
       spinnerTipsEnabled = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
-        description = "Show tips in the loading spinner (default: true).";
+        type = types.bool;
+        default = true;
+        description = "Show tips in the loading spinner. Claude default: true.";
       };
 
       respectGitignore = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
-        description = "Respect .gitignore patterns in the file picker (default: true).";
+        type = types.bool;
+        default = true;
+        description = "Respect .gitignore patterns in the file picker. Claude default: true.";
       };
 
       skipDangerousModePermissionPrompt = mkOption {
         type = types.nullOr types.bool;
         default = null;
-        description = "Skip the confirmation prompt when entering bypass-permissions mode.";
+        description = ''
+          Skip the confirmation prompt when entering bypass-permissions mode.
+          Undocumented/internal setting — may not exist in all versions.
+          See also permissions.disableBypassPermissionsMode.
+        '';
       };
 
       disableAllHooks = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
-        description = "Disable all hooks and the status line command.";
+        type = types.bool;
+        default = false;
+        description = "Disable all hooks and the status line command. Claude default: false.";
       };
 
       enableAllProjectMcpServers = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
-        description = "Auto-approve all project-level MCP servers from .mcp.json files.";
+        type = types.bool;
+        default = false;
+        description = "Auto-approve all project-level MCP servers from .mcp.json files. Claude default: false.";
       };
 
       enabledMcpjsonServers = mkOption {
@@ -614,11 +632,11 @@ in {
       };
 
       teammateMode = mkOption {
-        type = types.nullOr (types.enum ["auto" "in-process" "tmux"]);
-        default = null;
+        type = types.enum ["auto" "in-process" "tmux"];
+        default = "auto";
         description = ''
-          Agent teams execution mode.
-            auto — Claude chooses (default)
+          Agent teams execution mode. Claude default: "auto".
+            auto — Claude chooses
             in-process — teammates run as subprocesses
             tmux — teammates run in tmux panes (visible, debuggable)
         '';
@@ -763,15 +781,15 @@ in {
 
     sandbox = {
       enabled = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
-        description = "Enable command sandboxing (default: false). Restricts filesystem and network access.";
+        type = types.bool;
+        default = false;
+        description = "Enable command sandboxing. Claude default: false. Restricts filesystem and network access.";
       };
 
       autoAllowBashIfSandboxed = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
-        description = "Auto-approve all bash commands when sandbox is enabled (default: true).";
+        type = types.bool;
+        default = true;
+        description = "Auto-approve all bash commands when sandbox is enabled. Claude default: true.";
       };
 
       excludedCommands = mkOption {
@@ -782,21 +800,21 @@ in {
       };
 
       allowUnsandboxedCommands = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
-        description = "Allow tools to use dangerouslyDisableSandbox escape hatch (default: true).";
+        type = types.bool;
+        default = true;
+        description = "Allow tools to use dangerouslyDisableSandbox escape hatch. Claude default: true.";
       };
 
       enableWeakerNestedSandbox = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
-        description = "Use weaker sandbox inside Docker/containers where full sandboxing is unavailable.";
+        type = types.bool;
+        default = false;
+        description = "Use weaker sandbox inside Docker/containers where full sandboxing is unavailable. Claude default: false.";
       };
 
       enableWeakerNetworkIsolation = mkOption {
-        type = types.nullOr types.bool;
-        default = null;
-        description = "Allow TLS trust service access on macOS (needed for some network operations).";
+        type = types.bool;
+        default = false;
+        description = "Allow TLS trust service access on macOS (needed for some network operations). Claude default: false.";
       };
 
       filesystem = {
@@ -830,15 +848,15 @@ in {
         };
 
         allowAllUnixSockets = mkOption {
-          type = types.nullOr types.bool;
-          default = null;
-          description = "Allow access to all Unix sockets (overrides allowUnixSockets list).";
+          type = types.bool;
+          default = false;
+          description = "Allow access to all Unix sockets (overrides allowUnixSockets list). Claude default: false.";
         };
 
         allowLocalBinding = mkOption {
-          type = types.nullOr types.bool;
-          default = null;
-          description = "Allow binding to localhost ports (macOS sandbox).";
+          type = types.bool;
+          default = false;
+          description = "Allow binding to localhost ports (macOS sandbox). Claude default: false.";
         };
 
         allowedDomains = mkOption {
