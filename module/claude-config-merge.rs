@@ -70,8 +70,11 @@ fn main() {
     // is removed). Also removes entries with missing binaries (GC'd paths).
     let cleaned = clean_stale_mcp_servers(&merged, &managed);
 
-    // Report what changed
-    report_mcp_status(&cleaned);
+    // Report and validate
+    let valid = report_mcp_status(&cleaned);
+    if !valid {
+        eprintln!("claude-config-merge: WARNING: config has invalid MCP entries (see above)");
+    }
 
     // Atomic write
     let tmp_path = config_path.with_extension("json.tmp");
@@ -88,24 +91,44 @@ fn main() {
     });
 }
 
-fn report_mcp_status(config: &JsonValue) {
+fn report_mcp_status(config: &JsonValue) -> bool {
+    let mut all_valid = true;
     if let JsonValue::Object(root) = config {
         if let Some(JsonValue::Object(servers)) = root.get("mcpServers") {
             if servers.is_empty() {
                 eprintln!("claude-config-merge: no MCP servers configured");
-                return;
+                return true;
             }
             for (name, entry) in servers {
                 if let JsonValue::Object(obj) = entry {
+                    if obj.is_empty() {
+                        eprintln!("  {name}: INVALID (empty entry — no command/type)");
+                        all_valid = false;
+                        continue;
+                    }
+                    if !obj.contains_key("command") && !obj.contains_key("url") {
+                        eprintln!("  {name}: INVALID (missing command or url)");
+                        all_valid = false;
+                        continue;
+                    }
                     if let Some(JsonValue::Str(cmd)) = obj.get("command") {
                         let exists = command_exists(cmd);
                         let status = if exists { "ok" } else { "MISSING" };
+                        if !exists {
+                            all_valid = false;
+                        }
                         eprintln!("  {name}: {status} ({cmd})");
+                    } else if let Some(JsonValue::Str(url)) = obj.get("url") {
+                        eprintln!("  {name}: ok ({url})");
                     }
+                } else {
+                    eprintln!("  {name}: INVALID (not an object)");
+                    all_valid = false;
                 }
             }
         }
     }
+    all_valid
 }
 
 fn clean_stale_mcp_servers(config: &JsonValue, managed: &JsonValue) -> JsonValue {
