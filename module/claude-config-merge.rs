@@ -129,8 +129,12 @@ fn clean_stale_mcp_servers(config: &JsonValue, managed: &JsonValue) -> JsonValue
         let stale: Vec<String> = servers
             .iter()
             .filter_map(|(name, entry)| {
-                // Remove servers whose binaries are missing (GC'd store paths)
+                // Remove empty server entries (no command field — invalid schema)
                 if let JsonValue::Object(obj) = entry {
+                    if obj.is_empty() || !obj.contains_key("command") {
+                        eprintln!("claude-config-merge: removing invalid server '{name}' (empty or missing command)");
+                        return Some(name.clone());
+                    }
                     if let Some(JsonValue::Str(cmd)) = obj.get("command") {
                         if !command_exists(cmd) {
                             eprintln!("claude-config-merge: removing stale server '{name}' (binary missing: {cmd})");
