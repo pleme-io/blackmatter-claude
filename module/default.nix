@@ -186,6 +186,9 @@ with lib; let
     // optionalAttrs (mcpCfg.codesearch.enable && config.services.codesearch.mcp.serverEntry != {}) {
       codesearch = config.services.codesearch.mcp.serverEntry;
     }
+    // optionalAttrs (mcpCfg.amimori.enable && config.services.amimori.mcp.serverEntry != {}) {
+      amimori = config.services.amimori.mcp.serverEntry;
+    }
     // optionalAttrs mcpCfg.github.enable {
       github = {
         type = "stdio";
@@ -1187,6 +1190,14 @@ in {
         };
       };
 
+      amimori = {
+        enable = mkOption {
+          type = types.bool;
+          default = false;
+          description = "Enable amimori MCP server for continuous network profiling (reads serverEntry from services.amimori.mcp)";
+        };
+      };
+
       github = {
         enable = mkOption {
           type = types.bool;
@@ -1585,6 +1596,9 @@ in {
     })
     (mkIf (cfg.enable && mcpCfg.codesearch.enable) {
       services.codesearch.mcp.enable = mkDefault true;
+    })
+    (mkIf (cfg.enable && mcpCfg.amimori.enable) {
+      services.amimori.mcp.enable = mkDefault true;
     })
 
     # LSP config → ~/.claude/lsp.json
