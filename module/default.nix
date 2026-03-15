@@ -81,6 +81,27 @@ with lib; let
     exec "${mcpCfg.github.package}/bin/github-mcp-server" stdio
   '';
 
+  # ── Atlassian MCP wrapper (resolves API token from command or file) ────
+  # Reads token via apiTokenCommand (e.g. akeyless get-secret-value) or from
+  # apiTokenEnvFile, then exports JIRA_* and CONFLUENCE_* env vars.
+  atlassianMcpScript = pkgs.writeShellScript "atlassian-mcp-wrapper" ''
+    ${lib.optionalString (mcpCfg.atlassian.apiTokenCommand != null) ''
+    ATLASSIAN_API_TOKEN="$(${mcpCfg.atlassian.apiTokenCommand})"
+    ''}
+    ${lib.optionalString (mcpCfg.atlassian.apiTokenEnvFile != null) ''
+    if [ -z "''${ATLASSIAN_API_TOKEN:-}" ] && [ -f "${mcpCfg.atlassian.apiTokenEnvFile}" ]; then
+      ATLASSIAN_API_TOKEN="$(cat "${mcpCfg.atlassian.apiTokenEnvFile}")"
+    fi
+    ''}
+    export JIRA_URL="${mcpCfg.atlassian.siteUrl}"
+    export JIRA_USERNAME="${mcpCfg.atlassian.username}"
+    export JIRA_API_TOKEN="''${ATLASSIAN_API_TOKEN:-}"
+    export CONFLUENCE_URL="${mcpCfg.atlassian.siteUrl}/wiki"
+    export CONFLUENCE_USERNAME="${mcpCfg.atlassian.username}"
+    export CONFLUENCE_API_TOKEN="''${ATLASSIAN_API_TOKEN:-}"
+    exec uvx mcp-atlassian
+  '';
+
   # ── LSP server map ──────────────────────────────────────────────────────
 
   serverEntries =
@@ -232,6 +253,12 @@ with lib; let
         type = "stdio";
         command = "${mcpCfg.typemill.package}/bin/mill";
         args = ["start"];
+      };
+    }
+    // optionalAttrs mcpCfg.atlassian.enable {
+      atlassian = {
+        type = "stdio";
+        command = "${atlassianMcpScript}";
       };
     }
     // mcpCfg.extraServers;
@@ -1293,6 +1320,42 @@ in {
           type = types.package;
           default = pkgs.typemill;
           description = "typemill package (mill binary)";
+        };
+      };
+
+      atlassian = {
+        enable = mkOption {
+          type = types.bool;
+          default = false;
+          description = "Enable Atlassian MCP server for Jira and Confluence integration via mcp-atlassian (uvx)";
+        };
+
+        siteUrl = mkOption {
+          type = types.str;
+          default = "";
+          example = "https://akeyless.atlassian.net";
+          description = "Atlassian site URL (e.g. https://myorg.atlassian.net). Used for both Jira and Confluence.";
+        };
+
+        username = mkOption {
+          type = types.str;
+          default = "";
+          example = "user@example.com";
+          description = "Atlassian username (email address) for API authentication.";
+        };
+
+        apiTokenCommand = mkOption {
+          type = types.nullOr types.str;
+          default = null;
+          example = "akeyless get-secret-value --name /pleme/atlassian/api-token -o raw";
+          description = "Shell command to fetch the Atlassian API token at MCP server startup. Takes priority over apiTokenEnvFile.";
+        };
+
+        apiTokenEnvFile = mkOption {
+          type = types.nullOr types.str;
+          default = null;
+          example = "~/.config/atlassian/api-token";
+          description = "Path to file containing the Atlassian API token. Used as fallback when apiTokenCommand is not set or ATLASSIAN_API_TOKEN is empty.";
         };
       };
 
