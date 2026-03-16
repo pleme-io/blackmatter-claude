@@ -168,7 +168,7 @@ with lib; let
     // optionalAttrs (mcpCfg.amimori.enable && config.services.amimori.mcp.serverEntry != {}) {
       amimori = config.services.amimori.mcp.serverEntry;
     }
-    // optionalAttrs (mcpCfg.kurage.enable && config.services.kurage.mcp.serverEntry != {}) {
+    // optionalAttrs (mcpCfg.kurageMcp.enable && config.services.kurage.mcp.serverEntry != {}) {
       kurage = config.services.kurage.mcp.serverEntry;
     };
 
@@ -359,7 +359,7 @@ in {
     (mkIf (cfg.enable && mcpCfg.amimori.enable) {
       services.amimori.mcp.enable = mkDefault true;
     })
-    (mkIf (cfg.enable && mcpCfg.kurage.enable) {
+    (mkIf (cfg.enable && mcpCfg.kurageMcp.enable) {
       services.kurage.mcp.enable = mkDefault true;
     })
 

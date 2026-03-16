@@ -582,7 +582,7 @@ in {
       description = "Enable amimori MCP (reads from services.amimori.mcp.serverEntry).";
     };
 
-    kurage.enable = mkOption {
+    kurageMcp.enable = mkOption {
       type = types.bool;
       default = false;
       description = "Enable kurage MCP — Cursor Cloud Agents bridge (reads from services.kurage.mcp.serverEntry).";
