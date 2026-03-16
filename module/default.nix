@@ -167,6 +167,9 @@ with lib; let
     }
     // optionalAttrs (mcpCfg.amimori.enable && config.services.amimori.mcp.serverEntry != {}) {
       amimori = config.services.amimori.mcp.serverEntry;
+    }
+    // optionalAttrs (mcpCfg.kurage.enable && config.services.kurage.mcp.serverEntry != {}) {
+      kurage = config.services.kurage.mcp.serverEntry;
     };
 
   mcpServers = anvilServers // serviceMcpServers // mcpCfg.extraServers;
@@ -355,6 +358,9 @@ in {
     })
     (mkIf (cfg.enable && mcpCfg.amimori.enable) {
       services.amimori.mcp.enable = mkDefault true;
+    })
+    (mkIf (cfg.enable && mcpCfg.kurage.enable) {
+      services.kurage.mcp.enable = mkDefault true;
     })
 
     # LSP config → ~/.claude/lsp.json
