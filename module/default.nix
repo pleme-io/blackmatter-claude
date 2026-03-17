@@ -502,13 +502,10 @@ in {
       profileSettingsFile = pkgs.writeText "claude-${profileName}-settings.json"
         (builtins.toJSON profileSettings);
 
-      # Assemble profile MCP: scope-filtered anvil servers + profile extras
-      hasAnvil = config.blackmatter.components ? anvil
-                 && config.blackmatter.components.anvil.enable;
-      scopedServers = if hasAnvil
-        then config.blackmatter.components.anvil.serversForScope profile.scope
-        else {};
-      profileMcpServers = scopedServers // profile.extraMcpServers;
+      # Assemble profile MCP from extraMcpServers only.
+      # Scope-filtered anvil servers are passed in via extraMcpServers
+      # from the consuming config (e.g., nix repo's claude.nix).
+      profileMcpServers = profile.extraMcpServers;
       profileMcpFile = pkgs.writeText "claude-${profileName}-mcp.json"
         (builtins.toJSON { mcpServers = profileMcpServers; });
 
