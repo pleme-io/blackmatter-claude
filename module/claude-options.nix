@@ -670,5 +670,83 @@ in {
     haskellMcp.enable = mkOption { type = types.bool; default = false; description = "haskellPackages.mcp (often broken)"; };
     haskellMcpServer.enable = mkOption { type = types.bool; default = false; description = "haskellPackages.mcp-server (often broken)"; };
     ptyMcpServer.enable = mkOption { type = types.bool; default = false; description = "haskellPackages.pty-mcp-server (often broken)"; };
+
+    # ── Named Profiles ──────────────────────────────────────────────────
+    # Each profile produces a separate wrapper binary (e.g., claude-pleme,
+    # claude-akeyless) with its own settings, MCP servers, and auth.
+    # The base `claude` binary remains unchanged.
+    profiles = mkOption {
+      type = types.attrsOf (types.submodule ({ name, ... }: {
+        options = {
+          enable = mkEnableOption "Claude Code profile '${name}'";
+
+          binaryName = mkOption {
+            type = types.str;
+            default = "claude-${name}";
+            description = "Wrapper binary name in PATH.";
+          };
+
+          apiKeyFile = mkOption {
+            type = types.nullOr types.str;
+            default = null;
+            description = "Path to file containing the API key for this profile.";
+          };
+
+          forceLoginMethod = mkOption {
+            type = types.nullOr (types.enum [ "claudeai" "console" ]);
+            default = null;
+            description = "Force login method (claudeai = personal, console = enterprise).";
+          };
+
+          forceLoginOrgUUID = mkOption {
+            type = types.nullOr types.str;
+            default = null;
+            description = "Organization UUID for enterprise profiles.";
+          };
+
+          model = mkOption {
+            type = types.nullOr types.str;
+            default = null;
+            description = "Default model override for this profile.";
+          };
+
+          effortLevel = mkOption {
+            type = types.nullOr (types.enum [ "low" "medium" "high" "max" ]);
+            default = null;
+            description = "Reasoning effort level for this profile.";
+          };
+
+          scope = mkOption {
+            type = types.str;
+            default = name;
+            description = "Anvil scope name for MCP server filtering.";
+          };
+
+          extraMcpServers = mkOption {
+            type = types.attrs;
+            default = {};
+            description = "Additional MCP servers specific to this profile.";
+          };
+
+          extraSettings = mkOption {
+            type = types.attrs;
+            default = {};
+            description = "Additional settings merged into the profile's settings JSON.";
+          };
+
+          env = mkOption {
+            type = types.attrsOf types.str;
+            default = {};
+            description = "Extra environment variables for this profile's wrapper.";
+          };
+        };
+      }));
+      default = {};
+      description = ''
+        Named Claude Code profiles. Each enabled profile creates a wrapper
+        binary that launches claude with profile-specific settings and MCP
+        servers. Profiles share sessions, skills, and history via ~/.claude/.
+      '';
+    };
   };
 }
