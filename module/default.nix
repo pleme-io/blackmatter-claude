@@ -503,9 +503,10 @@ in {
         (builtins.toJSON profileSettings);
 
       # Assemble profile MCP: scope-filtered anvil servers + profile extras
-      anvilCfg = config.blackmatter.components.anvil or null;
-      scopedServers = if anvilCfg != null && anvilCfg.enable or false
-        then anvilCfg.serversForScope profile.scope
+      hasAnvil = config.blackmatter.components ? anvil
+                 && config.blackmatter.components.anvil.enable;
+      scopedServers = if hasAnvil
+        then config.blackmatter.components.anvil.serversForScope profile.scope
         else {};
       profileMcpServers = scopedServers // profile.extraMcpServers;
       profileMcpFile = pkgs.writeText "claude-${profileName}-mcp.json"
