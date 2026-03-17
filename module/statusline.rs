@@ -36,8 +36,15 @@ fn main() {
     let filled_bar = "━".repeat(filled);
     let empty_bar = "╌".repeat(empty);
 
+    // Workspace prefix from env var (e.g. "PLEME | ")
+    let workspace_prefix = std::env::var("WORKSPACE")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .map(|s| format!("{b}{}{r} {d}│{r} ", s.to_uppercase()))
+        .unwrap_or_default();
+
     println!(
-        "{b}{model}{r} {d}│{r} {c}{filled_bar}{d}{empty_bar}{r} {w}{pct}%{r}",
+        "{workspace_prefix}{b}{model}{r} {d}│{r} {c}{filled_bar}{d}{empty_bar}{r} {w}{pct}%{r}",
         pct = pct as u32,
     );
 }
