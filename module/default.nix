@@ -479,53 +479,5 @@ in {
         ++ (optionals (mcpPkgsCfg.haskellMcpServer.enable && builtins.hasAttr "mcp-server" haskellPackages) [haskellPackages.mcp-server])
         ++ (optionals (mcpPkgsCfg.ptyMcpServer.enable && builtins.hasAttr "pty-mcp-server" haskellPackages) [haskellPackages.pty-mcp-server]);
     }))
-
-    # ── Profile Wrappers ──────────────────────────────────────────────────
-    # Each enabled profile creates a wrapper binary that launches claude
-    # with profile-specific --settings and --mcp-config flags.
-    # Uses mkMerge inside a single block to stay lazy (avoids eval cycle).
-    (mkIf cfg.enable {
-      home.packages = let
-        mkProfileWrapper = profileName: profile: let
-          profileSettings = {}
-            // (optionalAttrs (profile.model != null) { model = profile.model; })
-            // (optionalAttrs (profile.effortLevel != null) { effortLevel = profile.effortLevel; })
-            // (optionalAttrs (profile.apiKeyFile != null) {
-              apiKeyHelper = "cat ${profile.apiKeyFile}";
-            })
-            // (optionalAttrs (profile.forceLoginMethod != null) {
-              forceLoginMethod = profile.forceLoginMethod;
-            })
-            // (optionalAttrs (profile.forceLoginOrgUUID != null) {
-              forceLoginOrgUUID = profile.forceLoginOrgUUID;
-            })
-            // profile.extraSettings;
-
-          profileSettingsFile = pkgs.writeText "claude-${profileName}-settings.json"
-            (builtins.toJSON profileSettings);
-
-          profileMcpServers = profile.extraMcpServers;
-          profileMcpFile = pkgs.writeText "claude-${profileName}-mcp.json"
-            (builtins.toJSON { mcpServers = profileMcpServers; });
-
-          envExports = concatStringsSep "\n" (mapAttrsToList (k: v:
-            "export ${k}=${escapeShellArg v}"
-          ) profile.env);
-
-          wrapper = pkgs.writeShellScript "claude-${profileName}" ''
-            ${envExports}
-            exec ${cfg.package}/bin/claude \
-              --settings ${profileSettingsFile} \
-              --mcp-config ${profileMcpFile} \
-              "$@"
-          '';
-        in pkgs.runCommand profile.binaryName {} ''
-          mkdir -p $out/bin
-          ln -s ${wrapper} $out/bin/${profile.binaryName}
-        '';
-
-        enabledProfiles = filterAttrs (_: p: p.enable) cfg.profiles;
-      in mapAttrsToList mkProfileWrapper enabledProfiles;
-    })
   ];
 }
