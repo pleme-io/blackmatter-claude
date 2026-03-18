@@ -635,6 +635,20 @@ in {
       terraform   = mkOption { type = types.bool; default = true; description = "Block destructive Terraform/Pulumi/Ansible commands."; };
       cloud       = mkOption { type = types.bool; default = true; description = "Block destructive cloud CLI commands (AWS, GCP, Azure)."; };
       flux        = mkOption { type = types.bool; default = true; description = "Block destructive FluxCD/GitOps commands."; };
+      akeyless    = mkOption { type = types.bool; default = true; description = "Block destructive Akeyless CLI commands."; };
+      process     = mkOption { type = types.bool; default = true; description = "Block destructive process/system commands."; };
+      network     = mkOption { type = types.bool; default = true; description = "Block destructive network/firewall commands."; };
+      nosql       = mkOption { type = types.bool; default = true; description = "Block destructive NoSQL/cache commands."; };
+    };
+
+    suites = {
+      aws     = mkOption { type = types.bool; default = true; description = "Deploy AWS CLI guardrail suite."; };
+      gcp     = mkOption { type = types.bool; default = true; description = "Deploy GCP CLI guardrail suite."; };
+      azure   = mkOption { type = types.bool; default = true; description = "Deploy Azure CLI guardrail suite."; };
+      akeyless = mkOption { type = types.bool; default = true; description = "Deploy Akeyless CLI guardrail suite."; };
+      process = mkOption { type = types.bool; default = true; description = "Deploy process/system guardrail suite."; };
+      network = mkOption { type = types.bool; default = true; description = "Deploy network/firewall guardrail suite."; };
+      nosql   = mkOption { type = types.bool; default = true; description = "Deploy NoSQL/cache guardrail suite."; };
     };
 
     extraRules = mkOption {
