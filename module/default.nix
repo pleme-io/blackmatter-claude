@@ -400,14 +400,14 @@ in {
       ) {} ["aws" "gcp" "azure" "akeyless" "process" "network" "nosql" "sql" "aws-generated" "akeyless-generated"];
 
       # Inject PreToolUse hook — wildcard (all tools) or Bash-only
-      blackmatter.components.claude.hooks.PreToolUse = [{
+      blackmatter.components.claude.hooks.PreToolUse = [({
         hooks = [{
           type = "command";
           command = "${pkgs.guardrail}/bin/guardrail check";
         }];
       } // lib.optionalAttrs (!guardrailCfg.hookAllTools) {
         matcher = "Bash";
-      }];
+      })];
 
       # Pre-compile rules cache after deployment for fast check (10ms vs 217ms)
       home.activation.guardrail-compile = lib.hm.dag.entryAfter ["writeBoundary"] ''
