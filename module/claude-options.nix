@@ -614,6 +614,40 @@ in {
   };
 
   # ══════════════════════════════════════════════════════════════════════
+  # GUARDRAIL — defensive hooks to block destructive commands
+  # ══════════════════════════════════════════════════════════════════════
+
+  guardrail = {
+    enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "Enable guardrail defensive hooks for Bash tool calls.";
+    };
+
+    categories = {
+      filesystem  = mkOption { type = types.bool; default = true; description = "Block destructive filesystem commands (rm -rf /, mkfs)."; };
+      git         = mkOption { type = types.bool; default = true; description = "Block destructive git commands (force push main, reset --hard)."; };
+      database    = mkOption { type = types.bool; default = true; description = "Block destructive SQL (DROP TABLE, TRUNCATE, DELETE without WHERE)."; };
+      kubernetes  = mkOption { type = types.bool; default = true; description = "Block destructive K8s commands (delete namespace, delete --all)."; };
+      nix         = mkOption { type = types.bool; default = true; description = "Warn on Nix garbage collection."; };
+      docker      = mkOption { type = types.bool; default = true; description = "Warn on Docker prune commands."; };
+      secrets     = mkOption { type = types.bool; default = true; description = "Warn on secret exposure patterns."; };
+    };
+
+    extraRules = mkOption {
+      type = types.listOf (types.attrsOf types.anything);
+      default = [];
+      description = "Additional guardrail rules merged with compiled-in defaults.";
+    };
+
+    disabledRules = mkOption {
+      type = types.listOf types.str;
+      default = [];
+      description = "Names of compiled-in rules to disable.";
+    };
+  };
+
+  # ══════════════════════════════════════════════════════════════════════
   # THEME
   # ══════════════════════════════════════════════════════════════════════
 

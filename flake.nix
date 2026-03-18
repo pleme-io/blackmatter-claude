@@ -11,14 +11,22 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    guardrail = {
+      url = "github:pleme-io/guardrail";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, devenv, claude-code }:
+  outputs = { self, nixpkgs, devenv, claude-code, guardrail }:
   let
     forAllSystems = nixpkgs.lib.genAttrs [
       "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"
     ];
   in {
+    overlays.default = final: prev: {
+      guardrail = guardrail.packages.${prev.stdenv.hostPlatform.system}.default;
+    };
+
     homeManagerModules.default = import ./module { inherit claude-code; };
 
     devShells = forAllSystems (system: let
