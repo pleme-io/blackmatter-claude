@@ -163,7 +163,37 @@ with lib; let
     }
     // lspCfg.extraServers;
 
-  # ── MCP config path ───────────────────────────────────────────────────
+  # ── MCP servers from anvil + service-level + extras ────────────────────
+  anvilServers = config.blackmatter.components.anvil.generatedServers;
+
+  # Service-level MCP servers (zoekt, codesearch, amimori) still read from services.*
+  serviceMcpServers =
+    {}
+    // optionalAttrs (mcpCfg.zoektMcp.enable && config.services.zoekt.mcp.serverEntry != {}) {
+      zoekt = config.services.zoekt.mcp.serverEntry;
+    }
+    // optionalAttrs (mcpCfg.codesearch.enable && config.services.codesearch.mcp.serverEntry != {}) {
+      codesearch = config.services.codesearch.mcp.serverEntry;
+    }
+    // optionalAttrs (mcpCfg.amimori.enable && config.services.amimori.mcp.serverEntry != {}) {
+      amimori = config.services.amimori.mcp.serverEntry;
+    }
+    // optionalAttrs (mcpCfg.kurageMcp.enable && config.services.kurage.mcp.serverEntry != {}) {
+      kurage = config.services.kurage.mcp.serverEntry;
+    };
+
+  mcpServers = anvilServers // serviceMcpServers // mcpCfg.extraServers;
+
+  # ── Managed MCP config (deep-merged into ~/.claude.json) ──────────────
+
+  managedConfig =
+    optionalAttrs (mcpServers != {}) {inherit mcpServers;};
+  hasManagedConfig = managedConfig != {};
+
+  # JSON blob written to a nix store file for the activation script
+  managedConfigFile = pkgs.writeText "claude-managed-config.json"
+    (builtins.toJSON managedConfig);
+
   # Claude Code reads MCP servers from ~/.claude.json (user scope)
   claudeConfigPath = "${config.home.homeDirectory}/.claude.json";
 
@@ -327,26 +357,36 @@ in {
       home.packages = [ cfg.package ];
     })
 
+    # Auto-enable service-level MCP flags when the claude module enables them.
+    # This bridges the gap between blackmatter.components.claude.mcp.zoektMcp.enable
+    # and services.zoekt.mcp.enable (which gates serverEntry generation).
+    (mkIf (cfg.enable && mcpCfg.zoektMcp.enable) {
+      services.zoekt.mcp.enable = mkDefault true;
+    })
+    (mkIf (cfg.enable && mcpCfg.codesearch.enable) {
+      services.codesearch.mcp.enable = mkDefault true;
+    })
+    (mkIf (cfg.enable && mcpCfg.amimori.enable) {
+      services.amimori.mcp.enable = mkDefault true;
+    })
+    (mkIf (cfg.enable && mcpCfg.kurageMcp.enable) {
+      services.kurage.mcp.enable = mkDefault true;
+    })
+
     # LSP config → ~/.claude/lsp.json
     (mkIf (cfg.enable && lspCfg.enable) {
       home.file.".claude/lsp.json".text = builtins.toJSON serverEntries;
     })
 
-    # MCP servers: wrapper binaries (claude-pleme, claude-akeyless) pass
-    # --mcp-config with scope-filtered servers from anvil.serversForScope.
-    # The base ~/.claude.json only gets extraServers (if any).
-    # This avoids reading anvil.generatedServers here (which causes
-    # infinite recursion with service self-registrations).
-    (mkIf (cfg.enable && mcpCfg.extraServers != {}) (let
-      managedConfigFile = pkgs.writeText "claude-managed-config.json"
-        (builtins.toJSON { mcpServers = mcpCfg.extraServers; });
-    in {
+    # MCP servers → deep-merged into ~/.claude.json (user scope)
+    # Uses Rust binary for robust merge + stale path cleanup
+    (mkIf (cfg.enable && hasManagedConfig) {
       home.activation.claude-mcp-config = lib.hm.dag.entryAfter ["writeBoundary"] ''
         run ${configMergeBinary}/bin/claude-config-merge \
           "${managedConfigFile}" \
           --config "${claudeConfigPath}"
       '';
-    }))
+    })
 
     # Skills → ~/.claude/skills/{name}/SKILL.md (user scope)
     # Auto-discovers bundled skills from ../skills/ + merges extraSkills
@@ -389,15 +429,14 @@ in {
         }
       ) {} ["aws" "gcp" "azure" "akeyless" "process" "network" "nosql" "sql" "aws-generated" "akeyless-generated"];
 
-      # Inject PreToolUse hook — wildcard (all tools) or Bash-only
-      blackmatter.components.claude.hooks.PreToolUse = [({
+      # Inject PreToolUse hook for Bash
+      blackmatter.components.claude.hooks.PreToolUse = [{
+        matcher = "Bash";
         hooks = [{
           type = "command";
           command = "${pkgs.guardrail}/bin/guardrail check";
         }];
-      } // lib.optionalAttrs (!guardrailCfg.hookAllTools) {
-        matcher = "Bash";
-      })];
+      }];
 
       # Pre-compile rules cache after deployment for fast check (10ms vs 217ms)
       home.activation.guardrail-compile = lib.hm.dag.entryAfter ["writeBoundary"] ''
