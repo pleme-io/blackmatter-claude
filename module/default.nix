@@ -404,10 +404,22 @@ in {
           terraform = guardrailCfg.categories.terraform;
           cloud = guardrailCfg.categories.cloud;
           flux = guardrailCfg.categories.flux;
+          akeyless = guardrailCfg.categories.akeyless;
+          process = guardrailCfg.categories.process;
+          network = guardrailCfg.categories.network;
+          nosql = guardrailCfg.categories.nosql;
         };
         extraRules = guardrailCfg.extraRules;
         disabledRules = guardrailCfg.disabledRules;
       };
+
+      # Deploy guardrail rule suites to rules.d/
+      home.file = lib.mkMerge (map (suite:
+        lib.optionalAttrs guardrailCfg.suites.${suite} {
+          ".config/guardrail/rules.d/${suite}.yaml".source =
+            "${pkgs.guardrail-rules}/${suite}.yaml";
+        }
+      ) ["aws" "gcp" "azure" "akeyless" "process" "network" "nosql"]);
 
       # Inject PreToolUse hook for Bash
       blackmatter.components.claude.hooks.PreToolUse = [{

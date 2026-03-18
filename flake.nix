@@ -25,6 +25,7 @@
   in {
     overlays.default = final: prev: {
       guardrail = guardrail.packages.${prev.stdenv.hostPlatform.system}.default;
+      guardrail-rules = guardrail + "/rules";
     };
 
     homeManagerModules.default = import ./module { inherit claude-code; };
