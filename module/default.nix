@@ -427,7 +427,7 @@ in {
           ".config/guardrail/rules.d/${suite}.yaml".source =
             "${pkgs.guardrail-rules}/${suite}.yaml";
         }
-      ) {} ["aws" "gcp" "azure" "akeyless" "process" "network" "nosql"];
+      ) {} ["aws" "gcp" "azure" "akeyless" "process" "network" "nosql" "sql"];
 
       # Inject PreToolUse hook for Bash
       blackmatter.components.claude.hooks.PreToolUse = [{
