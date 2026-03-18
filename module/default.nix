@@ -401,6 +401,9 @@ in {
           nix = guardrailCfg.categories.nix;
           docker = guardrailCfg.categories.docker;
           secrets = guardrailCfg.categories.secrets;
+          terraform = guardrailCfg.categories.terraform;
+          cloud = guardrailCfg.categories.cloud;
+          flux = guardrailCfg.categories.flux;
         };
         extraRules = guardrailCfg.extraRules;
         disabledRules = guardrailCfg.disabledRules;
