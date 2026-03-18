@@ -42,6 +42,7 @@ with lib; let
   mcpCfg = cfg.mcp;
   mcpPkgsCfg = cfg.mcpPackages;
   skillsCfg = cfg.skills;
+  guardrailCfg = cfg.guardrail;
   themeCfg = cfg.theme;
 
   inherit (pkgs.stdenv.hostPlatform) isLinux isDarwin;
@@ -386,6 +387,33 @@ in {
           source = path;
         }
       ) allSkillFiles;
+    })
+
+    # Guardrail → defensive hooks for Bash tool calls
+    (mkIf (cfg.enable && guardrailCfg.enable) {
+      # Generate shikumi config at ~/.config/guardrail/guardrail.yaml
+      home.file.".config/guardrail/guardrail.yaml".text = builtins.toJSON {
+        categories = {
+          filesystem = guardrailCfg.categories.filesystem;
+          git = guardrailCfg.categories.git;
+          database = guardrailCfg.categories.database;
+          kubernetes = guardrailCfg.categories.kubernetes;
+          nix = guardrailCfg.categories.nix;
+          docker = guardrailCfg.categories.docker;
+          secrets = guardrailCfg.categories.secrets;
+        };
+        extraRules = guardrailCfg.extraRules;
+        disabledRules = guardrailCfg.disabledRules;
+      };
+
+      # Inject PreToolUse hook for Bash
+      blackmatter.components.claude.hooks.PreToolUse = [{
+        matcher = "Bash";
+        hooks = [{
+          type = "command";
+          command = "${pkgs.guardrail}/bin/guardrail check";
+        }];
+      }];
     })
 
     # Settings → deep-merged into ~/.claude/settings.json
