@@ -632,6 +632,9 @@ in {
       nix         = mkOption { type = types.bool; default = true; description = "Warn on Nix garbage collection."; };
       docker      = mkOption { type = types.bool; default = true; description = "Warn on Docker prune commands."; };
       secrets     = mkOption { type = types.bool; default = true; description = "Warn on secret exposure patterns."; };
+      terraform   = mkOption { type = types.bool; default = true; description = "Block destructive Terraform/Pulumi/Ansible commands."; };
+      cloud       = mkOption { type = types.bool; default = true; description = "Block destructive cloud CLI commands (AWS, GCP, Azure)."; };
+      flux        = mkOption { type = types.bool; default = true; description = "Block destructive FluxCD/GitOps commands."; };
     };
 
     extraRules = mkOption {
