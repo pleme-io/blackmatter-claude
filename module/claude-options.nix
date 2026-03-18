@@ -614,6 +614,8 @@ in {
       network = mkOption { type = types.bool; default = true; description = "Deploy network/firewall guardrail suite."; };
       nosql   = mkOption { type = types.bool; default = true; description = "Deploy NoSQL/cache guardrail suite."; };
       sql     = mkOption { type = types.bool; default = true; description = "Deploy SQL guardrail suite (all engines + migration tools)."; };
+      aws-generated = mkOption { type = types.bool; default = true; description = "Deploy auto-generated AWS guardrail suite (2,250 rules from 298 services)."; };
+      akeyless-generated = mkOption { type = types.bool; default = true; description = "Deploy auto-generated Akeyless guardrail suite from OpenAPI spec."; };
     };
 
     extraRules = mkOption {
