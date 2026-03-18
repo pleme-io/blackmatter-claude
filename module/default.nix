@@ -332,23 +332,21 @@ in {
       home.file.".claude/lsp.json".text = builtins.toJSON serverEntries;
     })
 
-    # MCP servers → deep-merged into ~/.claude.json (user scope)
-    # Uses Rust binary for robust merge + stale path cleanup.
-    # anvil.generatedServers is read inside a derivation (pkgs.writeText),
-    # which defers evaluation to build time — no recursion at eval time.
-    (mkIf cfg.enable {
-      home.activation.claude-mcp-config = lib.hm.dag.entryAfter ["writeBoundary"] (let
-        anvilServers = config.blackmatter.components.anvil.generatedServers;
-        mcpServers = anvilServers // mcpCfg.extraServers;
-        managedConfig = { inherit mcpServers; };
-        managedConfigFile = pkgs.writeText "claude-managed-config.json"
-          (builtins.toJSON managedConfig);
-      in ''
+    # MCP servers: wrapper binaries (claude-pleme, claude-akeyless) pass
+    # --mcp-config with scope-filtered servers from anvil.serversForScope.
+    # The base ~/.claude.json only gets extraServers (if any).
+    # This avoids reading anvil.generatedServers here (which causes
+    # infinite recursion with service self-registrations).
+    (mkIf (cfg.enable && mcpCfg.extraServers != {}) (let
+      managedConfigFile = pkgs.writeText "claude-managed-config.json"
+        (builtins.toJSON { mcpServers = mcpCfg.extraServers; });
+    in {
+      home.activation.claude-mcp-config = lib.hm.dag.entryAfter ["writeBoundary"] ''
         run ${configMergeBinary}/bin/claude-config-merge \
           "${managedConfigFile}" \
           --config "${claudeConfigPath}"
-      '');
-    })
+      '';
+    }))
 
     # Skills → ~/.claude/skills/{name}/SKILL.md (user scope)
     # Auto-discovers bundled skills from ../skills/ + merges extraSkills
