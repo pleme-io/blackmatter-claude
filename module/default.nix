@@ -163,26 +163,12 @@ with lib; let
     }
     // lspCfg.extraServers;
 
-  # ── MCP servers from anvil + service-level + extras ────────────────────
+  # ── MCP servers from anvil + extras ───────────────────────────────────
+  # Services self-register with anvil via mkAnvilRegistration (Phase 1).
+  # No manual bridge needed — anvil.generatedServers contains everything.
   anvilServers = config.blackmatter.components.anvil.generatedServers;
 
-  # Service-level MCP servers (zoekt, codesearch, amimori) still read from services.*
-  serviceMcpServers =
-    {}
-    // optionalAttrs (mcpCfg.zoektMcp.enable && config.services.zoekt.mcp.serverEntry != {}) {
-      zoekt = config.services.zoekt.mcp.serverEntry;
-    }
-    // optionalAttrs (mcpCfg.codesearch.enable && config.services.codesearch.mcp.serverEntry != {}) {
-      codesearch = config.services.codesearch.mcp.serverEntry;
-    }
-    // optionalAttrs (mcpCfg.amimori.enable && config.services.amimori.mcp.serverEntry != {}) {
-      amimori = config.services.amimori.mcp.serverEntry;
-    }
-    // optionalAttrs (mcpCfg.kurageMcp.enable && config.services.kurage.mcp.serverEntry != {}) {
-      kurage = config.services.kurage.mcp.serverEntry;
-    };
-
-  mcpServers = anvilServers // serviceMcpServers // mcpCfg.extraServers;
+  mcpServers = anvilServers // mcpCfg.extraServers;
 
   # ── Managed MCP config (deep-merged into ~/.claude.json) ──────────────
 
@@ -357,22 +343,6 @@ in {
       home.packages = [ cfg.package ];
     })
 
-    # Auto-enable service-level MCP flags when the claude module enables them.
-    # This bridges the gap between blackmatter.components.claude.mcp.zoektMcp.enable
-    # and services.zoekt.mcp.enable (which gates serverEntry generation).
-    (mkIf (cfg.enable && mcpCfg.zoektMcp.enable) {
-      services.zoekt.mcp.enable = mkDefault true;
-    })
-    (mkIf (cfg.enable && mcpCfg.codesearch.enable) {
-      services.codesearch.mcp.enable = mkDefault true;
-    })
-    (mkIf (cfg.enable && mcpCfg.amimori.enable) {
-      services.amimori.mcp.enable = mkDefault true;
-    })
-    (mkIf (cfg.enable && mcpCfg.kurageMcp.enable) {
-      services.kurage.mcp.enable = mkDefault true;
-    })
-
     # LSP config → ~/.claude/lsp.json
     (mkIf (cfg.enable && lspCfg.enable) {
       home.file.".claude/lsp.json".text = builtins.toJSON serverEntries;
@@ -429,13 +399,14 @@ in {
         }
       ) {} ["aws" "gcp" "azure" "akeyless" "process" "network" "nosql" "sql" "aws-generated" "akeyless-generated"];
 
-      # Inject PreToolUse hook for Bash
+      # Inject PreToolUse hook — wildcard (all tools) or Bash-only
       blackmatter.components.claude.hooks.PreToolUse = [{
-        matcher = "Bash";
         hooks = [{
           type = "command";
           command = "${pkgs.guardrail}/bin/guardrail check";
         }];
+      } // lib.optionalAttrs (!guardrailCfg.hookAllTools) {
+        matcher = "Bash";
       }];
 
       # Pre-compile rules cache after deployment for fast check (10ms vs 217ms)

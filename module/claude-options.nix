@@ -528,34 +528,14 @@ in {
   # ══════════════════════════════════════════════════════════════════════
 
   mcp = {
-    zoektMcp.enable = mkOption {
-      type = types.bool;
-      default = false;
-      description = "Enable zoekt-mcp (reads from services.zoekt.mcp.serverEntry).";
-    };
-
-    codesearch.enable = mkOption {
-      type = types.bool;
-      default = false;
-      description = "Enable codesearch MCP (reads from services.codesearch.mcp.serverEntry).";
-    };
-
-    amimori.enable = mkOption {
-      type = types.bool;
-      default = false;
-      description = "Enable amimori MCP (reads from services.amimori.mcp.serverEntry).";
-    };
-
-    kurageMcp.enable = mkOption {
-      type = types.bool;
-      default = false;
-      description = "Enable kurage MCP — Cursor Cloud Agents bridge (reads from services.kurage.mcp.serverEntry).";
-    };
+    # Service-level MCP options (zoektMcp, codesearch, amimori, kurageMcp)
+    # have been removed. Services now self-register with anvil via
+    # mkAnvilRegistration. Enable services in mcp-services.nix instead.
 
     extraServers = mkOption {
       type = types.attrs;
       default = {};
-      description = "Additional MCP servers merged on top of anvil-generated and service-level.";
+      description = "Additional MCP servers merged on top of anvil-generated servers.";
     };
   };
 
@@ -585,7 +565,17 @@ in {
     enable = mkOption {
       type = types.bool;
       default = false;
-      description = "Enable guardrail defensive hooks for Bash tool calls.";
+      description = "Enable guardrail defensive hooks for tool calls.";
+    };
+
+    hookAllTools = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        When true, guardrail hooks ALL tool calls (wildcard matcher).
+        When false, only hooks Bash tool calls.
+        Wildcard mode enables scanning of Write, Edit, NotebookEdit, and MCP tools.
+      '';
     };
 
     categories = {
