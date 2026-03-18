@@ -613,6 +613,7 @@ in {
       process = mkOption { type = types.bool; default = true; description = "Deploy process/system guardrail suite."; };
       network = mkOption { type = types.bool; default = true; description = "Deploy network/firewall guardrail suite."; };
       nosql   = mkOption { type = types.bool; default = true; description = "Deploy NoSQL/cache guardrail suite."; };
+      sql     = mkOption { type = types.bool; default = true; description = "Deploy SQL guardrail suite (all engines + migration tools)."; };
     };
 
     extraRules = mkOption {
