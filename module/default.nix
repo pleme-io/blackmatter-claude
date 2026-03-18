@@ -437,6 +437,11 @@ in {
           command = "${pkgs.guardrail}/bin/guardrail check";
         }];
       }];
+
+      # Pre-compile rules cache after deployment for fast check (10ms vs 217ms)
+      home.activation.guardrail-compile = lib.hm.dag.entryAfter ["writeBoundary"] ''
+        run ${pkgs.guardrail}/bin/guardrail compile
+      '';
     })
 
     # Settings → deep-merged into ~/.claude/settings.json
