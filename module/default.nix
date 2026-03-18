@@ -57,6 +57,15 @@ with lib; let
   optList = name: value: optionalAttrs (value != []) { ${name} = value; };
   optNested = name: value: optionalAttrs (value != {}) { ${name} = value; };
 
+  # Recursively strip null values from attrsets (prevents "Expected X, but received null" in Claude/Cursor settings)
+  stripNulls = value:
+    if builtins.isAttrs value then
+      lib.filterAttrs (_: v: v != null) (builtins.mapAttrs (_: stripNulls) value)
+    else if builtins.isList value then
+      map stripNulls value
+    else
+      value;
+
   # ── Bundled skills (auto-discovered from ../skills/) ────────────────
   skillsDir = ../skills;
   bundledSkillNames =
@@ -296,7 +305,7 @@ with lib; let
     // optNested "permissions" permsObj
     // optNested "attribution" attrObj
     // { sandbox = sandboxObj; }
-    // optNested "hooks" hooksCfg
+    // optNested "hooks" (stripNulls hooksCfg)
     # Statusline
     // optionalAttrs themeCfg.statusline.enable {
       statusLine = {

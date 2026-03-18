@@ -22,42 +22,6 @@ let
         default = null;
         description = "Shell command to execute (command type).";
       };
-
-      url = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        description = "URL to call (http type).";
-      };
-
-      method = mkOption {
-        type = types.str;
-        default = "POST";
-        description = "HTTP method (http type).";
-      };
-
-      headers = mkOption {
-        type = types.attrsOf types.str;
-        default = {};
-        description = "HTTP headers (http type).";
-      };
-
-      prompt = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        description = "Prompt text (prompt/agent type). Supports $ARGUMENTS variable.";
-      };
-
-      model = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        description = "Model for prompt/agent hooks (e.g. haiku).";
-      };
-
-      timeout = mkOption {
-        type = types.nullOr types.int;
-        default = null;
-        description = "Timeout in seconds (default: 600 for command, 30 for http).";
-      };
     };
   };
 
