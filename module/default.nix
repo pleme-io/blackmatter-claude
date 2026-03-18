@@ -391,35 +391,34 @@ in {
 
     # Guardrail → defensive hooks for Bash tool calls
     (mkIf (cfg.enable && guardrailCfg.enable) {
-      # Generate shikumi config at ~/.config/guardrail/guardrail.yaml
-      home.file.".config/guardrail/guardrail.yaml".text = builtins.toJSON {
-        categories = {
-          filesystem = guardrailCfg.categories.filesystem;
-          git = guardrailCfg.categories.git;
-          database = guardrailCfg.categories.database;
-          kubernetes = guardrailCfg.categories.kubernetes;
-          nix = guardrailCfg.categories.nix;
-          docker = guardrailCfg.categories.docker;
-          secrets = guardrailCfg.categories.secrets;
-          terraform = guardrailCfg.categories.terraform;
-          cloud = guardrailCfg.categories.cloud;
-          flux = guardrailCfg.categories.flux;
-          akeyless = guardrailCfg.categories.akeyless;
-          process = guardrailCfg.categories.process;
-          network = guardrailCfg.categories.network;
-          nosql = guardrailCfg.categories.nosql;
+      # Generate shikumi config + deploy rule suites
+      home.file = {
+        ".config/guardrail/guardrail.yaml".text = builtins.toJSON {
+          categories = {
+            filesystem = guardrailCfg.categories.filesystem;
+            git = guardrailCfg.categories.git;
+            database = guardrailCfg.categories.database;
+            kubernetes = guardrailCfg.categories.kubernetes;
+            nix = guardrailCfg.categories.nix;
+            docker = guardrailCfg.categories.docker;
+            secrets = guardrailCfg.categories.secrets;
+            terraform = guardrailCfg.categories.terraform;
+            cloud = guardrailCfg.categories.cloud;
+            flux = guardrailCfg.categories.flux;
+            akeyless = guardrailCfg.categories.akeyless;
+            process = guardrailCfg.categories.process;
+            network = guardrailCfg.categories.network;
+            nosql = guardrailCfg.categories.nosql;
+          };
+          extraRules = guardrailCfg.extraRules;
+          disabledRules = guardrailCfg.disabledRules;
         };
-        extraRules = guardrailCfg.extraRules;
-        disabledRules = guardrailCfg.disabledRules;
-      };
-
-      # Deploy guardrail rule suites to rules.d/
-      home.file = lib.mkMerge (map (suite:
-        lib.optionalAttrs guardrailCfg.suites.${suite} {
+      } // lib.foldl' (acc: suite:
+        acc // lib.optionalAttrs guardrailCfg.suites.${suite} {
           ".config/guardrail/rules.d/${suite}.yaml".source =
             "${pkgs.guardrail-rules}/${suite}.yaml";
         }
-      ) ["aws" "gcp" "azure" "akeyless" "process" "network" "nosql"]);
+      ) {} ["aws" "gcp" "azure" "akeyless" "process" "network" "nosql"];
 
       # Inject PreToolUse hook for Bash
       blackmatter.components.claude.hooks.PreToolUse = [{
