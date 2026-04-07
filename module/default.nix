@@ -180,6 +180,9 @@ with lib; let
     }
     // optionalAttrs (mcpCfg.kurageMcp.enable && config.services.kurage.mcp.serverEntry != {}) {
       kurage = config.services.kurage.mcp.serverEntry;
+    }
+    // optionalAttrs (mcpCfg.shinryuMcp.enable && config.services.shinryu.mcp.serverEntry != {}) {
+      shinryu = config.services.shinryu.mcp.serverEntry;
     };
 
   mcpServers = anvilServers // serviceMcpServers // mcpCfg.extraServers;
@@ -371,6 +374,9 @@ in {
     })
     (mkIf (cfg.enable && mcpCfg.kurageMcp.enable) {
       services.kurage.mcp.enable = mkDefault true;
+    })
+    (mkIf (cfg.enable && mcpCfg.shinryuMcp.enable) {
+      services.shinryu.mcp.enable = mkDefault true;
     })
 
     # LSP config → ~/.claude/lsp.json
