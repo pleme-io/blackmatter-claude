@@ -552,6 +552,12 @@ in {
       description = "Enable kurage MCP — Cursor Cloud Agents bridge (reads from services.kurage.mcp.serverEntry).";
     };
 
+    shinryuMcp.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "Enable shinryu-mcp — Shinryū analytical query plane for cross-signal SQL over Parquet (reads from services.shinryu.mcp.serverEntry).";
+    };
+
     extraServers = mkOption {
       type = types.attrs;
       default = {};
