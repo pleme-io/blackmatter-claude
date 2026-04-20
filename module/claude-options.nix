@@ -61,10 +61,15 @@ in {
     };
 
     effortLevel = mkOption {
-      type = types.nullOr (types.enum ["low" "medium" "high"]);
-      default = null;
-      example = "high";
-      description = "Reasoning effort level. Leave null for auto-detection.";
+      type = types.nullOr (types.enum ["low" "medium" "high" "xhigh" "max"]);
+      default = "max";
+      example = "max";
+      description = ''
+        Reasoning effort level. Fleet default is "max" — maximum capability
+        with deepest reasoning, preferring intelligence over speed.
+        Valid values: low, medium, high, xhigh, max. Set to null to defer to
+        claude-code's auto-detection.
+      '';
     };
 
     language = mkOption {
@@ -101,8 +106,12 @@ in {
 
     alwaysThinkingEnabled = mkOption {
       type = types.nullOr types.bool;
-      default = null;
-      description = "Enable extended thinking (chain-of-thought) by default.";
+      default = true;
+      description = ''
+        Enable extended thinking (chain-of-thought) by default. Fleet default
+        is true — always reason explicitly before responding, preferring
+        intelligence over speed. Set to null to defer to claude-code's auto.
+      '';
     };
 
     includeGitInstructions = mkOption {
@@ -113,8 +122,12 @@ in {
 
     fastModePerSessionOptIn = mkOption {
       type = types.bool;
-      default = false;
-      description = "Require per-session opt-in for fast mode (/fast).";
+      default = true;
+      description = ''
+        Require per-session opt-in for fast mode (/fast). Fleet default is
+        true — intelligence over speed. Fast mode must be explicitly chosen
+        each session via /fast, never auto-enabled.
+      '';
     };
 
     autoUpdatesChannel = mkOption {

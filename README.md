@@ -34,11 +34,15 @@ Deep-merged files use a Rust activation script that preserves manual edits, remo
 blackmatter.components.claude = {
   enable = true;
 
-  # Model and behavior
+  # Model and behavior. Fleet doctrine: intelligence over speed —
+  # effortLevel defaults to "max", alwaysThinkingEnabled defaults to true,
+  # and fastModePerSessionOptIn defaults to true. Override only if you
+  # need to trade intelligence for something else.
   settings = {
     model = "opus";
-    effortLevel = "high";
-    alwaysThinkingEnabled = true;
+    # effortLevel = "max";              # default
+    # alwaysThinkingEnabled = true;     # default
+    # fastModePerSessionOptIn = true;   # default
     autoMemoryEnabled = true;
     env.ANTHROPIC_MODEL = "opus";
   };

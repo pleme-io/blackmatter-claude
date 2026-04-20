@@ -2,6 +2,21 @@
 
 Declarative Claude Code configuration via Nix home-manager. Generic (not org-specific) — pleme-io-specific skills live in `blackmatter-pleme`.
 
+## Fleet doctrine: intelligence over speed
+
+Three settings enforce the "always reason deeply" preference and are set
+as the module defaults — override only with deliberate justification:
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `settings.effortLevel` | `"max"` | Deepest reasoning mode (low/medium/high/xhigh/max) |
+| `settings.alwaysThinkingEnabled` | `true` | Always emit explicit chain-of-thought |
+| `settings.fastModePerSessionOptIn` | `true` | Fast mode (`/fast`) requires per-session opt-in |
+
+`/effort` and `/fast` slash commands still work for per-session overrides.
+The doctrine applies to every agent wired through `blackmatter-anvil`
+(Claude Code, Cursor, OpenCode, future tools) — see `blackmatter-anvil/CLAUDE.md`.
+
 ## Architecture
 
 Single home-manager module at `blackmatter.components.claude` managing all Claude Code config files:
