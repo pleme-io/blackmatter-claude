@@ -1,0 +1,24 @@
+schema_version: 1
+manifest:
+  name: blackmatter-claude
+  kind: BlackmatterComponent
+  archetype: blackmatter-component-hm-overlay
+  description: Claude Code integration — LSP, MCP servers, skills, guardrails, hooks.
+dimensions:
+  vocabulary: [claude, claude-code, mcp, skills, hooks, guardrail]
+  domains: [Nix, JSON, Markdown]
+  stack: [HomeManager]
+  modules:
+    home_manager: module/
+  render:
+    produces:
+      - "~/.claude/settings.json"
+      - "~/.claude/skills/*.md"
+      - "~/.claude/hooks/*"
+      - "~/.config/claude-code/mcp.json"
+  compliance:
+    satisfies: []
+    participates: [ai-agent-governance]
+  dag:
+    inputs: [nixpkgs, substrate, claude-code, guardrail]
+  attestation: { merkle_root: null, signed_by: null, producer: blackmatter-component-flake.nix }

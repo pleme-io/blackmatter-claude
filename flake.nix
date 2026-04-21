@@ -1,10 +1,10 @@
 {
-  description = "Blackmatter Claude - Claude Code integration with LSP, Zoekt, Codesearch, and MCP servers";
+  description = "Blackmatter Claude — Claude Code integration (LSP, Zoekt, Codesearch, MCP servers)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
-    devenv = {
-      url = "github:cachix/devenv";
+    substrate = {
+      url = "github:pleme-io/substrate";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     claude-code = {
@@ -17,31 +17,15 @@
     };
   };
 
-  outputs = { self, nixpkgs, devenv, claude-code, guardrail }:
-  let
-    forAllSystems = nixpkgs.lib.genAttrs [
-      "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"
-    ];
-  in {
-    overlays.default = final: prev: {
-      guardrail = guardrail.packages.${prev.stdenv.hostPlatform.system}.default;
-      guardrail-rules = guardrail + "/rules";
-    };
-
-    homeManagerModules.default = import ./module { inherit claude-code; };
-
-    devShells = forAllSystems (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
-    in {
-      default = devenv.lib.mkShell {
-        inputs = { inherit nixpkgs devenv; };
-        inherit pkgs;
-        modules = [{
-          languages.nix.enable = true;
-          packages = with pkgs; [ nixpkgs-fmt nil ];
-          git-hooks.hooks.nixpkgs-fmt.enable = true;
-        }];
+  outputs = inputs @ { self, nixpkgs, substrate, claude-code, guardrail, ... }:
+    (import "${substrate}/lib/blackmatter-component-flake.nix") {
+      inherit self nixpkgs;
+      name = "blackmatter-claude";
+      description = "Claude Code integration — LSP, MCP servers, skills, guardrails";
+      modules.homeManager = import ./module { inherit claude-code; };
+      overlay = final: prev: {
+        guardrail = guardrail.packages.${prev.stdenv.hostPlatform.system}.default;
+        guardrail-rules = guardrail + "/rules";
       };
-    });
-  };
+    };
 }
