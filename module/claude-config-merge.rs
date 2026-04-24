@@ -76,19 +76,37 @@ fn main() {
         eprintln!("claude-config-merge: WARNING: config has invalid MCP entries (see above)");
     }
 
-    // Atomic write
-    let tmp_path = config_path.with_extension("json.tmp");
+    // Atomic write. Use explicit `.tmp` suffix construction rather than
+    // `with_extension` — the latter has dotfile quirks (e.g. `.claude.json`
+    // has file_stem=".claude" extension="json", which can produce surprising
+    // tmp paths and intermittent ENOENT on rename when another process
+    // (Spotlight/antivirus) touches the tmp before we do).
+    let tmp_path = {
+        let mut s = config_path.clone().into_os_string();
+        s.push(".tmp");
+        PathBuf::from(s)
+    };
     let output = format_json(&cleaned);
     fs::write(&tmp_path, &output).unwrap_or_else(|e| {
         eprintln!("error: cannot write {}: {e}", tmp_path.display());
         std::process::exit(1);
     });
-    fs::rename(&tmp_path, &config_path).unwrap_or_else(|e| {
-        eprintln!("error: cannot rename to {}: {e}", config_path.display());
-        // Clean up tmp
+    if let Err(e) = fs::rename(&tmp_path, &config_path) {
+        // Rename failure is recoverable — the existing config is intact
+        // (rename is atomic on the same filesystem), and the merged content
+        // is recomputable next activation. Log + clean up + exit 0 so HM
+        // activation continues.
+        eprintln!(
+            "claude-config-merge: WARNING: cannot rename {} -> {}: {e}",
+            tmp_path.display(),
+            config_path.display()
+        );
+        eprintln!(
+            "claude-config-merge: existing config at {} is unchanged; will retry next activation",
+            config_path.display()
+        );
         let _ = fs::remove_file(&tmp_path);
-        std::process::exit(1);
-    });
+    }
 }
 
 fn report_mcp_status(config: &JsonValue) -> bool {
