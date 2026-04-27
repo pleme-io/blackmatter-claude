@@ -1,5 +1,8 @@
 # blackmatter-claude
 
+> **★★★ CSE / Knowable Construction.** This repo operates under **Constructive Substrate Engineering** — canonical specification at [`pleme-io/theory/CONSTRUCTIVE-SUBSTRATE-ENGINEERING.md`](https://github.com/pleme-io/theory/blob/main/CONSTRUCTIVE-SUBSTRATE-ENGINEERING.md). The Compounding Directive (operational rules: solve once, load-bearing fixes only, idiom-first, models stay current, direction beats velocity) is in the org-level pleme-io/CLAUDE.md ★★★ section. Read both before non-trivial changes.
+
+
 Declarative Claude Code configuration via Nix home-manager. Generic (not org-specific) — pleme-io-specific skills live in `blackmatter-pleme`.
 
 ## Fleet doctrine: intelligence over speed
