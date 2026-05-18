@@ -279,7 +279,6 @@ with lib; let
         includeGitInstructions        # true
         autoMemoryEnabled             # true
         cleanupPeriodDays             # 30
-        fastModePerSessionOptIn       # false
         prefersReducedMotion          # false
         disableAllHooks               # false
         enableAllProjectMcpServers    # false
@@ -292,6 +291,7 @@ with lib; let
     // optAttr "outputStyle" settingsCfg.outputStyle
     // optAttr "apiKeyHelper" settingsCfg.apiKeyHelper
     // optAttr "alwaysThinkingEnabled" settingsCfg.alwaysThinkingEnabled
+    // optAttr "fastModePerSessionOptIn" settingsCfg.fastModePerSessionOptIn
     // optAttr "autoUpdatesChannel" settingsCfg.autoUpdatesChannel
     // optAttr "plansDirectory" settingsCfg.plansDirectory
     // optList "claudeMdExcludes" settingsCfg.claudeMdExcludes
@@ -359,6 +359,35 @@ in {
     (mkIf cfg.enable {
       home.packages = [ cfg.package ];
     })
+
+    # Doctrine flow: anvil → claude. Each key in
+    # `anvil.translatedSettings.claude` is applied to
+    # `blackmatter.components.claude.settings.<key>` via mkDefault, so
+    # anvil is the single source of truth for fleet doctrine. User /
+    # profile overrides at `blackmatter.components.claude.settings.<key>`
+    # still win (regular priority > mkDefault). When anvil's doctrine is
+    # disabled, the translation is `{}` and this overlay does nothing —
+    # the per-option defaults in claude-options.nix (currently null) then
+    # apply and claude-code falls back to its own auto-detection.
+    #
+    # This module assumes `blackmatter-anvil` is also imported into the
+    # home-manager module tree. The fleet darwinConfigurations always
+    # import both; standalone consumers must do the same.
+    #
+    # NOTE: not gated on `cfg.enable` — gating on the same module's
+    # enable triggers infinite recursion (mkIf cond → eval cfg.enable →
+    # eval claude option tree → eval all definitions including this
+    # mkIf → eval cond). When claude isn't enabled, the settings writes
+    # are unreferenced and harmless.
+    (
+      let
+        anvilClaudeSettings =
+          config.blackmatter.components.anvil.translatedSettings.claude or {};
+      in {
+        blackmatter.components.claude.settings =
+          lib.mapAttrs (_: lib.mkDefault) anvilClaudeSettings;
+      }
+    )
 
     # Auto-enable service-level MCP flags when the claude module enables them.
     # This bridges the gap between blackmatter.components.claude.mcp.zoektMcp.enable

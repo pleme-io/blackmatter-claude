@@ -62,13 +62,15 @@ in {
 
     effortLevel = mkOption {
       type = types.nullOr (types.enum ["low" "medium" "high" "xhigh" "max"]);
-      default = "max";
+      default = null;
       example = "max";
       description = ''
-        Reasoning effort level. Fleet default is "max" — maximum capability
-        with deepest reasoning, preferring intelligence over speed.
-        Valid values: low, medium, high, xhigh, max. Set to null to defer to
-        claude-code's auto-detection.
+        Reasoning effort level. Valid values: low, medium, high, xhigh, max.
+        Fleet doctrine flows from `anvil.doctrine.intelligenceOverSpeed`
+        via `anvil.translatedSettings.claude` (applied as `mkDefault`), so
+        leaving this null in the fleet still resolves to "max" — anvil is
+        the source of truth. Explicit values here override anvil. Null with
+        no anvil overlay defers to claude-code's auto-detection.
       '';
     };
 
@@ -106,11 +108,14 @@ in {
 
     alwaysThinkingEnabled = mkOption {
       type = types.nullOr types.bool;
-      default = true;
+      default = null;
       description = ''
-        Enable extended thinking (chain-of-thought) by default. Fleet default
-        is true — always reason explicitly before responding, preferring
-        intelligence over speed. Set to null to defer to claude-code's auto.
+        Enable extended thinking (chain-of-thought) by default. Fleet
+        doctrine flows from `anvil.doctrine.intelligenceOverSpeed` via
+        `anvil.translatedSettings.claude` (applied as `mkDefault`), so the
+        fleet resolves this to `true` even when null here. Explicit values
+        override anvil. Null with no anvil overlay defers to claude-code's
+        auto-detection.
       '';
     };
 
@@ -121,12 +126,16 @@ in {
     };
 
     fastModePerSessionOptIn = mkOption {
-      type = types.bool;
-      default = true;
+      type = types.nullOr types.bool;
+      default = null;
       description = ''
-        Require per-session opt-in for fast mode (/fast). Fleet default is
-        true — intelligence over speed. Fast mode must be explicitly chosen
-        each session via /fast, never auto-enabled.
+        Require per-session opt-in for fast mode (/fast). Fleet doctrine
+        flows from `anvil.doctrine.intelligenceOverSpeed` via
+        `anvil.translatedSettings.claude` (applied as `mkDefault`), so the
+        fleet resolves this to `true` — fast mode must be explicitly
+        chosen each session via /fast, never auto-enabled. Explicit values
+        override anvil. Null with no anvil overlay falls back to
+        claude-code's own default (false).
       '';
     };
 
