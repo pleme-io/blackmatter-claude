@@ -34,15 +34,18 @@ Deep-merged files use a Rust activation script that preserves manual edits, remo
 blackmatter.components.claude = {
   enable = true;
 
-  # Model and behavior. Fleet doctrine: intelligence over speed —
-  # effortLevel defaults to "max", alwaysThinkingEnabled defaults to true,
-  # and fastModePerSessionOptIn defaults to true. Override only if you
-  # need to trade intelligence for something else.
+  # Model and behavior. Fleet doctrine ("intelligence over speed") flows
+  # from `anvil.doctrine.intelligenceOverSpeed` via
+  # `anvil.translatedSettings.claude`, applied here as mkDefault — so
+  # effortLevel resolves to "max", alwaysThinkingEnabled to true, and
+  # fastModePerSessionOptIn to true in the fleet without restating
+  # them. This module assumes blackmatter-anvil is also imported. To
+  # change the fleet-wide value, edit anvil.doctrine.*.
   settings = {
     model = "opus";
-    # effortLevel = "max";              # default
-    # alwaysThinkingEnabled = true;     # default
-    # fastModePerSessionOptIn = true;   # default
+    # effortLevel = "max";              # from anvil doctrine
+    # alwaysThinkingEnabled = true;     # from anvil doctrine
+    # fastModePerSessionOptIn = true;   # from anvil doctrine
     autoMemoryEnabled = true;
     env.ANTHROPIC_MODEL = "opus";
   };

@@ -7,18 +7,30 @@ Declarative Claude Code configuration via Nix home-manager. Generic (not org-spe
 
 ## Fleet doctrine: intelligence over speed
 
-Three settings enforce the "always reason deeply" preference and are set
-as the module defaults — override only with deliberate justification:
+Three settings enforce the "always reason deeply" preference. The
+**source of truth is `blackmatter-anvil`** — `anvil.doctrine.intelligenceOverSpeed`
+gates `anvil.translatedSettings.claude`, and this module applies each
+translated key to its corresponding setting via `mkDefault`. The
+per-option defaults in `claude-options.nix` are `null` (claude-code
+auto-detect fallback for standalone use without anvil).
 
-| Option | Default | Effect |
-|--------|---------|--------|
-| `settings.effortLevel` | `"max"` | Deepest reasoning mode (low/medium/high/xhigh/max) |
-| `settings.alwaysThinkingEnabled` | `true` | Always emit explicit chain-of-thought |
-| `settings.fastModePerSessionOptIn` | `true` | Fast mode (`/fast`) requires per-session opt-in |
+| Setting | Source | Standalone fallback |
+|---------|--------|---------------------|
+| `settings.effortLevel` | `anvil.translatedSettings.claude.effortLevel` → `"max"` | `null` (claude-code auto-detect) |
+| `settings.alwaysThinkingEnabled` | `anvil.translatedSettings.claude.alwaysThinkingEnabled` → `true` | `null` |
+| `settings.fastModePerSessionOptIn` | `anvil.translatedSettings.claude.fastModePerSessionOptIn` → `true` | `null` |
 
-`/effort` and `/fast` slash commands still work for per-session overrides.
-The doctrine applies to every agent wired through `blackmatter-anvil`
-(Claude Code, Cursor, OpenCode, future tools) — see `blackmatter-anvil/CLAUDE.md`.
+This module **assumes `blackmatter-anvil` is also imported** into the
+home-manager module tree. The fleet `darwinConfigurations` always
+import both; standalone consumers must do the same. To change a fleet-
+wide doctrine value, edit `anvil.doctrine.*` — do not restate doctrine
+keys here.
+
+`/effort` and `/fast` slash commands work for per-session overrides;
+explicit `blackmatter.components.claude.settings.<key>` assignments
+override the anvil overlay (regular priority > `mkDefault`). The
+per-host CSE invariant in `nix/parts/checks.nix` asserts the derived
+values, catching wiring regressions.
 
 ## Architecture
 
