@@ -281,8 +281,37 @@ in {
 
     allow = mkOption {
       type = types.listOf types.str;
-      default = [];
-      description = "Tool patterns to auto-approve without prompting.";
+      default = [
+        # The five always-on pleme-io MCPs are default-enabled below in
+        # the `mcp` and `mcpPackages` blocks. Auto-approving their tool
+        # invocations matches the fleet-wide expectation that these
+        # are background substrate tools an agent uses without
+        # operator-per-call confirmation. Other MCPs (atlassian, kurage,
+        # mado, …) deliberately remain on the ask path because their
+        # actions are external + visible.
+        #
+        # If you need to deviate per-host, append to `permissions.allow`
+        # rather than overriding (lists merge), or move a pattern into
+        # `permissions.ask` to explicitly require confirmation.
+        "mcp__zoekt__search"
+        "mcp__zoekt__list_repos"
+        "mcp__codesearch__semantic_search"
+        "mcp__codesearch__find_references"
+        "mcp__codesearch__get_file_chunks"
+        "mcp__codesearch__find_databases"
+        "mcp__codesearch__index_status"
+        "mcp__github__*"
+        "mcp__kubernetes__*"
+        "mcp__fluxcd__*"
+      ];
+      description = ''
+        Tool patterns to auto-approve without prompting.
+
+        Default approves the five always-on pleme-io MCPs (zoekt,
+        codesearch, github, kubernetes, fluxcd) — they are background
+        substrate tools used continuously by agents and prompting on
+        every call breaks flow. Other MCPs stay on the ask path.
+      '';
     };
 
     deny = mkOption {
