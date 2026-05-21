@@ -303,6 +303,12 @@ in {
         "mcp__github__*"
         "mcp__kubernetes__*"
         "mcp__fluxcd__*"
+        # engenho-mcp is read-only by construction (P0 ships 4 reader
+        # tools sourced from kikai's on-disk state). All responses
+        # are secret-material-free by type. Writer layer (P2) will
+        # introduce a separate `mcp__engenho_writer__*` prefix that
+        # stays on the ask path with saguão passport gating.
+        "mcp__engenho__*"
       ];
       description = ''
         Tool patterns to auto-approve without prompting.
