@@ -40204,11 +40204,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1779934653,
-        "narHash": "sha256-kyJiDrolECUZyc+YD4rGDvxFu3rqFlDNtWVx8h3DwmQ=",
+        "lastModified": 1779935382,
+        "narHash": "sha256-7g5T3fkA9obQ1yszKgS99lnBLBkBwn1E1pnVMX2JDvc=",
         "owner": "pleme-io",
         "repo": "substrate",
-        "rev": "dc201550cf559d511e1fcefa9e48842a031adf2c",
+        "rev": "203c298e48618d87782be59a66984c962bb98213",
         "type": "github"
       },
       "original": {
