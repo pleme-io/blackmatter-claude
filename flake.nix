@@ -2,10 +2,9 @@
   description = "Blackmatter Claude — Claude Code integration (LSP, Zoekt, Codesearch, MCP servers)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.follows = "substrate/nixpkgs";
     substrate = {
       url = "github:pleme-io/substrate";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
     claude-code = {
       url = "github:sadjow/claude-code-nix";
