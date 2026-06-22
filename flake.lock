@@ -214,11 +214,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781026565,
-        "narHash": "sha256-sL9ZxUqeNFK2TXg0o0swSeJz0KlgkpLiyPSOq+Durug=",
+        "lastModified": 1781990783,
+        "narHash": "sha256-yfxxFMOkTbGnzCaim7h+H92Cb9DgeyVTtWtVrtDqs80=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "4b0229ec9e37c594156b492653eada8413446f09",
+        "rev": "a020d210d15807efebdf18aa1ff84f893956b714",
         "type": "github"
       },
       "original": {
@@ -2189,11 +2189,11 @@
         "nixpkgs": "nixpkgs_12"
       },
       "locked": {
-        "lastModified": 1781026974,
-        "narHash": "sha256-9hhv7628WQUb9YQ9kluS25NBjLl/p44fmyy6InNIMmM=",
+        "lastModified": 1781966061,
+        "narHash": "sha256-dVL4zyMu9wU0x0TmzKI5vJ1QiLI776cO8TM9qQIMftk=",
         "owner": "pleme-io",
         "repo": "substrate",
-        "rev": "3a168caffdeb6395f553734da9d5f5b235dd7263",
+        "rev": "90d4c8a32d2b1e00d0b1e00c4f5d99c5a3538963",
         "type": "github"
       },
       "original": {
