@@ -615,6 +615,32 @@ in {
       description = "Enable shinryu-mcp — Shinryū analytical query plane for cross-signal SQL over Parquet (reads from services.shinryu.mcp.serverEntry).";
     };
 
+    madoMcp = {
+      enable = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Register mado's MCP server (reads from
+          `blackmatter.components.mado.mcp.serverEntry`) so Claude Code can fully
+          control mado — sessions, panes, output, attention, vigy + the safra
+          board. Requires the blackmatter-mado module on the same node. See
+          CLAUDE-FOR-MADO.md.
+        '';
+      };
+      autoAllow = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Lift mado's READ-ONLY MCP tools (status / list_sessions / get_output /
+          snapshot_grid / recent_dirs_list / frame_perf / version) onto the
+          permission allow-list so Claude can observe mado without a prompt. The
+          MUTATING tools (spawn_term / send_keys / switch_session /
+          tear_new_session / config_set / attention_set / simulate_chord) stay on
+          the ask path regardless. Default false (every mado tool on ask).
+        '';
+      };
+    };
+
     extraServers = mkOption {
       type = types.attrs;
       default = {};
