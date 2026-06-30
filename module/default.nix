@@ -183,6 +183,13 @@ with lib; let
     }
     // optionalAttrs (mcpCfg.shinryuMcp.enable && config.services.shinryu.mcp.serverEntry != {}) {
       shinryu = config.services.shinryu.mcp.serverEntry;
+    }
+    # mado — the GPU terminal's full session/pane/output/attention/vigy/tear
+    # tool surface, so Claude Code can fully control mado (CLAUDE-FOR-MADO.md).
+    # Reads the hermetic entry from blackmatter-mado; `or {}` keeps eval safe if
+    # that module isn't on the node.
+    // optionalAttrs (mcpCfg.madoMcp.enable && (config.blackmatter.components.mado.mcp.serverEntry or {}) != {}) {
+      mado = config.blackmatter.components.mado.mcp.serverEntry;
     };
 
   mcpServers = anvilServers // serviceMcpServers // mcpCfg.extraServers;
@@ -227,10 +234,25 @@ with lib; let
   # Settings without defaults (nullOr) are only written when explicitly set.
   # Lists are only written when non-empty.
 
+  # mado read-only MCP tools — lifted onto the allow-list when
+  # `mcp.madoMcp.autoAllow` so Claude can OBSERVE mado without prompting. The
+  # mutating tools are deliberately excluded (they stay on the ask path). See
+  # CLAUDE-FOR-MADO.md.
+  madoAutoAllowTools =
+    optionals (mcpCfg.madoMcp.enable && mcpCfg.madoMcp.autoAllow) [
+      "mcp__mado__status"
+      "mcp__mado__list_sessions"
+      "mcp__mado__get_output"
+      "mcp__mado__snapshot_grid"
+      "mcp__mado__recent_dirs_list"
+      "mcp__mado__frame_perf"
+      "mcp__mado__version"
+    ];
+
   permsObj =
     {}
     // optAttr "defaultMode" permsCfg.defaultMode
-    // optList "allow" permsCfg.allow
+    // optList "allow" (permsCfg.allow ++ madoAutoAllowTools)
     // optList "deny" permsCfg.deny
     // optList "ask" permsCfg.ask
     // optList "additionalDirectories" permsCfg.additionalDirectories;
