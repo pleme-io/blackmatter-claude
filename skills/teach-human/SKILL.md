@@ -93,8 +93,17 @@ N. Synthesis — the whole model + the decision framework
 
 ## Phase 1 — teach one rung (one rung per turn, by default)
 
-A single rung has a fixed shape. Keep it to roughly one screen — depth comes
-from the *number* of rungs, not the size of one.
+**ATOMIC BY DEFAULT — this is the pacing that matters most.** A rung is
+delivered in **~2 short phrases (a hard max), plus one single check, then STOP.**
+Not a screen, not a paragraph, not three questions — one atomic idea a learner
+can hold in one breath, and one question. Depth comes from the *number* of rungs,
+never the size of one. If you are tempted to write more, you are fusing rungs —
+split them and teach the first. Only expand a rung (toward the fuller shape
+below) when the learner asks "deeper"/"more".
+
+The full shape below is the *maximum* a rung ever grows to (on a "deeper"
+request) — never the default. By default: one bolded phrase of concept, at most
+one short phrase of model-or-why, one check.
 
 1. **Name the core concept** in a single bolded sentence. This is the thing they
    must walk away with.
@@ -116,7 +125,9 @@ CORE-FIRST.
 After each rung, **you test the learner and you grade the answer.** Explaining is
 not teaching; the learner proving they can use the idea is teaching.
 
-1. **Pose 2–3 checks that require *using* the concept**, not recalling a word:
+1. **Pose ONE check by default** that requires *using* the concept, not recalling
+   a word (2–3 only when the learner asked to go deeper). Pick the single most
+   diagnostic of these:
    - **Restate** — "say rung N back in your own words" (catches parroting).
    - **Apply** — "here is a case we have not discussed; what does rung N predict?"
      (catches shallow understanding).
@@ -233,7 +244,7 @@ Full method rationale + the rung template + rubric detail live in
 - [ ] Rung 1 is the true master lens (everything else derives from it).
 - [ ] Each rung depends only on lower rungs (no forward references).
 - [ ] One concept per rung; each restatable in one breath.
-- [ ] Every rung ended with 2–3 *using* checks and a stop.
+- [ ] Every rung was atomic (~2 phrases max) and ended with ONE *using* check and a stop.
 - [ ] Graded each answer against the rubric; ascended only on got-it.
 - [ ] Re-taught shaky rungs from a new angle, then re-vetted.
 - [ ] Reached synthesis only after every lower rung passed.
