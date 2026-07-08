@@ -173,7 +173,18 @@ with lib; let
       zoekt = config.services.zoekt.mcp.serverEntry;
     }
     // optionalAttrs (mcpCfg.codesearch.enable && config.services.codesearch.mcp.serverEntry != {}) {
-      codesearch = config.services.codesearch.mcp.serverEntry;
+      # Repath codesearch's MCP to the pleme-io workspace root. Its serverEntry
+      # ships `args = ["mcp"]` with no project path, so `codesearch mcp` binds to
+      # whatever cwd Claude Code launched it from (historically drzln/curupira),
+      # never indexing this workspace. `codesearch mcp [PATH]` takes the project
+      # root as a positional arg — append it so the MCP always operates over
+      # ~/code/github/pleme-io. CODESEARCH_LMDB_MAP_SIZE_MB (from the base entry)
+      # is preserved by the `//` merge.
+      codesearch =
+        let base = config.services.codesearch.mcp.serverEntry;
+        in base // {
+          args = (base.args or [ "mcp" ]) ++ [ "${config.home.homeDirectory}/code/github/pleme-io" ];
+        };
     }
     // optionalAttrs (mcpCfg.amimori.enable && config.services.amimori.mcp.serverEntry != {}) {
       amimori = config.services.amimori.mcp.serverEntry;
@@ -486,14 +497,39 @@ in {
         }
       ) {} ["aws" "gcp" "azure" "akeyless" "process" "network" "nosql" "sql" "aws-generated" "akeyless-generated"];
 
-      # Inject PreToolUse hook for Bash
-      blackmatter.components.claude.hooks.PreToolUse = [{
-        matcher = "Bash";
-        hooks = [{
-          type = "command";
-          command = "${pkgs.guardrail}/bin/guardrail check";
-        }];
-      }];
+      # PreToolUse hooks:
+      #   • Bash       → guardrail check (block destructive commands)
+      #   • Grep|Glob  → guardrail search-nudge (advisory-only; steer toward
+      #                  mcp__zoekt__search — never denies today, see
+      #                  guardrail's promote-to-deny TODO).
+      blackmatter.components.claude.hooks.PreToolUse = [
+        {
+          matcher = "Bash";
+          hooks = [{
+            type = "command";
+            command = "${pkgs.guardrail}/bin/guardrail check";
+          }];
+        }
+        {
+          matcher = "Grep|Glob";
+          hooks = [{
+            type = "command";
+            command = "${pkgs.guardrail}/bin/guardrail search-nudge";
+          }];
+        }
+      ];
+
+      # PostToolUse hook: after a Grep|Glob runs over an indexed repo, inject
+      # advisory context nudging the next lookup toward mcp__zoekt__search.
+      blackmatter.components.claude.hooks.PostToolUse = [
+        {
+          matcher = "Grep|Glob";
+          hooks = [{
+            type = "command";
+            command = "${pkgs.guardrail}/bin/guardrail search-advise";
+          }];
+        }
+      ];
 
       # Pre-compile rules cache after deployment for fast check (10ms vs 217ms)
       home.activation.guardrail-compile = lib.hm.dag.entryAfter ["writeBoundary"] ''
