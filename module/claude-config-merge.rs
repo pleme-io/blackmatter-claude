@@ -204,8 +204,48 @@ fn clean_stale_mcp_servers(config: &JsonValue, managed: &JsonValue) -> JsonValue
 }
 
 fn command_exists(cmd: &str) -> bool {
-    // The command field can be a direct path or a wrapper script path
-    Path::new(cmd).exists()
+    // The command field is either a literal filesystem path (direct path or
+    // wrapper script path) or a bare command name meant to be resolved
+    // through $PATH (e.g. `npx`, `uvx`) — exactly how a shell resolves
+    // argv[0]. Mirror that: a name containing a path separator is used
+    // literally; a bare name is searched for across every $PATH directory.
+    // This is the same resolution algorithm `which` and most shells use.
+    if cmd.contains(std::path::MAIN_SEPARATOR) {
+        return Path::new(cmd).exists();
+    }
+    let path_var = std::env::var_os("PATH").unwrap_or_default();
+    resolve_in_path(cmd, &path_var).is_some()
+}
+
+/// Search `path_var` (a `$PATH`-shaped value, platform-delimited per
+/// `std::env::split_paths`) for an executable file named `cmd`. Split out
+/// from `command_exists` so tests can supply a synthetic PATH without
+/// mutating real process environment (env vars are process-global and
+/// mutating them is racy across parallel test threads).
+fn resolve_in_path(cmd: &str, path_var: &std::ffi::OsStr) -> Option<PathBuf> {
+    std::env::split_paths(path_var)
+        .map(|dir| dir.join(cmd))
+        .find(|candidate| is_executable_file(candidate))
+}
+
+fn is_executable_file(path: &Path) -> bool {
+    // `fs::metadata` follows symlinks (PATH entries are frequently symlinks,
+    // e.g. into a nix profile or store), unlike `symlink_metadata`.
+    let Ok(metadata) = fs::metadata(path) else {
+        return false;
+    };
+    if !metadata.is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        metadata.permissions().mode() & 0o111 != 0
+    }
+    #[cfg(not(unix))]
+    {
+        true
+    }
 }
 
 // ── Minimal JSON parser + formatter (zero deps) ──────────────────────────
@@ -438,5 +478,115 @@ fn format_value(val: &JsonValue, out: &mut String, indent: usize) {
 fn push_indent(out: &mut String, level: usize) {
     for _ in 0..level {
         out.push_str("  ");
+    }
+}
+
+// ── Tests ──────────────────────────────────────────────────────────────
+//
+// This binary is compiled directly via `rustc` (no Cargo.toml — see the
+// zero-dependency note at the top of this file), so there is no `cargo
+// test`. Build + run this module's tests with:
+//
+//   rustc --edition 2021 --test -o /tmp/claude-config-merge-test module/claude-config-merge.rs
+//   /tmp/claude-config-merge-test
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::OsString;
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+
+    /// Create `dir/name` as an executable file (mode 0o755) and return its path.
+    fn make_executable(dir: &Path, name: &str) -> PathBuf {
+        let path = dir.join(name);
+        fs::write(&path, "#!/bin/sh\n").unwrap();
+        let mut perms = fs::metadata(&path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&path, perms).unwrap();
+        path
+    }
+
+    /// Unique scratch dir per test so parallel test threads never collide.
+    fn scratch_dir(label: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "claude-config-merge-test-{label}-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn absolute_path_that_exists_is_found() {
+        let dir = scratch_dir("abs-exists");
+        let bin = make_executable(&dir, "literal-cmd");
+        assert!(command_exists(bin.to_str().unwrap()));
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn absolute_path_that_is_missing_is_not_found() {
+        // Backward-compat: an absolute/relative path that doesn't exist on
+        // disk must still report false, same as before this fix.
+        assert!(!command_exists(
+            "/definitely/not/a/real/path/claude-config-merge-test-missing"
+        ));
+    }
+
+    #[test]
+    fn bare_command_resolved_via_synthetic_path_is_found() {
+        // The core regression this fix closes: a bare PATH-resolved command
+        // name (e.g. `npx`, `uvx`) — not a literal filesystem path — must
+        // resolve to true when it exists somewhere on $PATH.
+        let dir = scratch_dir("path-found");
+        make_executable(&dir, "npx-like-tool");
+        let synthetic_path = OsString::from(dir.as_os_str());
+        assert!(resolve_in_path("npx-like-tool", &synthetic_path).is_some());
+        assert!(!"npx-like-tool".contains(std::path::MAIN_SEPARATOR));
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn bare_command_not_present_on_any_path_dir_is_not_found() {
+        let synthetic_path = OsString::from("/nonexistent/dir/one:/nonexistent/dir/two");
+        assert!(resolve_in_path(
+            "totally-nonexistent-command-claude-config-merge-xyz",
+            &synthetic_path
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn bare_command_skips_non_executable_match_and_finds_the_real_one() {
+        // A same-named non-executable file earlier on PATH must not shadow
+        // a real executable later on PATH (mirrors shell/`which` semantics).
+        let empty_dir = scratch_dir("path-non-exec");
+        let real_dir = scratch_dir("path-real");
+        let decoy = empty_dir.join("shadowed-tool");
+        fs::write(&decoy, "not executable").unwrap();
+        make_executable(&real_dir, "shadowed-tool");
+
+        let synthetic_path = std::env::join_paths([&empty_dir, &real_dir]).unwrap();
+        let found = resolve_in_path("shadowed-tool", &synthetic_path);
+        assert_eq!(found.as_deref(), Some(real_dir.join("shadowed-tool").as_path()));
+
+        fs::remove_dir_all(&empty_dir).ok();
+        fs::remove_dir_all(&real_dir).ok();
+    }
+
+    #[test]
+    fn bare_command_via_real_process_path_env_still_works() {
+        // Integration-style check against the real $PATH: `sh` is present on
+        // every Unix CI runner / dev machine in this fleet (macOS + NixOS).
+        assert!(command_exists("sh"));
+    }
+
+    #[test]
+    fn genuinely_nonexistent_bare_command_is_not_found() {
+        assert!(!command_exists(
+            "totally-nonexistent-command-claude-config-merge-xyz"
+        ));
     }
 }
