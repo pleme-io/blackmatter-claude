@@ -87,6 +87,17 @@ everywhere."
 
 ## Step 2 — rank by real leverage, not by list order
 
+**The standing prioritization rule: sprint/Jira-ticket-closing work outranks
+everything else, full stop.** Before applying the four tiers below, first
+partition candidates into "advances an open sprint ticket toward Done" versus
+"everything else" (interesting architecture work, exploratory research,
+tangential cleanup). A candidate in the first group beats every candidate in
+the second group, regardless of tier — a tier-3 item that closes a sprint
+ticket outranks a tier-1 item that doesn't. Within the sprint-ticket group,
+still rank by the four tiers below to pick which one first. State the ticket
+key explicitly when presenting the pick ("this closes ASM-12597's own DoD
+line: ...") so the connection from PR to sprint-item is never left implicit.
+
 Score every live candidate this way, highest tier wins:
 
 1. **Already at a decision point.** Green CI, approved, nothing left but a
