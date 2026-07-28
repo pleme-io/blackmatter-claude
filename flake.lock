@@ -2072,6 +2072,7 @@
           "substrate",
           "nixpkgs"
         ],
+        "skill-lint": "skill-lint",
         "substrate": "substrate_2"
       }
     },
@@ -2151,6 +2152,26 @@
       "original": {
         "owner": "oxalica",
         "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "skill-lint": {
+      "inputs": {
+        "substrate": [
+          "substrate"
+        ]
+      },
+      "locked": {
+        "lastModified": 1785095067,
+        "narHash": "sha256-cdWGokKI/RJwrgypgo6At0+fCfIMBlL0FItCWz/o+Lw=",
+        "owner": "pleme-io",
+        "repo": "skill-lint",
+        "rev": "c15e5bb2c230f88c61e27a03878b95fe94ff7940",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pleme-io",
+        "repo": "skill-lint",
         "type": "github"
       }
     },
