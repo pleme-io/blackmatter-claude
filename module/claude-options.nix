@@ -705,6 +705,7 @@ in {
       sql     = mkOption { type = types.bool; default = true; description = "Deploy SQL guardrail suite (all engines + migration tools)."; };
       aws-generated = mkOption { type = types.bool; default = true; description = "Deploy auto-generated AWS guardrail suite (2,250 rules from 298 services)."; };
       akeyless-generated = mkOption { type = types.bool; default = true; description = "Deploy auto-generated Akeyless guardrail suite from OpenAPI spec."; };
+      pleme-doctrine = mkOption { type = types.bool; default = true; description = "Deploy the pleme-io doctrine suite: org-CLAUDE.md absolutes expressible as a Bash pattern (in-place stream edits of structured files, hand-run tofu/terraform apply, docker build instead of Nix dockerTools). All warn-severity — shadow-first, promoted to block only on evidence."; };
     };
 
     extraRules = mkOption {
