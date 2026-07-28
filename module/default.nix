@@ -495,7 +495,7 @@ in {
           ".config/guardrail/rules.d/${suite}.yaml".source =
             "${pkgs.guardrail-rules}/${suite}.yaml";
         }
-      ) {} ["aws" "gcp" "azure" "akeyless" "process" "network" "nosql" "sql" "aws-generated" "akeyless-generated"];
+      ) {} ["aws" "gcp" "azure" "akeyless" "process" "network" "nosql" "sql" "aws-generated" "akeyless-generated" "pleme-doctrine"];
 
       # PreToolUse hooks:
       #   • Bash       → guardrail check (block destructive commands)
