@@ -96,8 +96,19 @@ in {
 
     cleanupPeriodDays = mkOption {
       type = types.int;
-      default = 30;
-      description = "Days before old sessions are deleted. 0 = disable.";
+      default = 90;
+      description = ''
+        Days before old session transcripts are deleted. `0` disables cleanup.
+
+        Raised from Claude Code's built-in 30 to 90. Transcripts are the only
+        record of how a decision was actually reached — they back `/usage`
+        attribution and the archaeology this operator routinely does across
+        past sessions — and the deletion is irrecoverable. A 30-day window
+        silently discards a full quarter of that.
+
+        Not measured against disk: if `~/.claude/projects/` turns out large,
+        dial this down deliberately rather than letting it default.
+      '';
     };
 
     autoMemoryEnabled = mkOption {
@@ -197,14 +208,49 @@ in {
 
     spinnerTipsEnabled = mkOption {
       type = types.bool;
-      default = true;
-      description = "Show tips in the loading spinner.";
+      default = false;
+      description = ''
+        Show rotating tips in the loading spinner.
+
+        Defaulted OFF for this fleet. With `effortLevel = max` and
+        always-thinking on, the spinner is the line the operator's eye is
+        parked on for minutes at a stretch, and generic onboarding copy
+        churning in that spot is motion without information. The duration and
+        token counters beside it already carry the signal.
+
+        Pure preference — flip it back per-profile if you miss them.
+      '';
     };
 
     respectGitignore = mkOption {
       type = types.bool;
       default = true;
       description = "Respect .gitignore patterns in file picker.";
+    };
+
+    includeCoAuthoredBy = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        Whether Claude Code appends a `Co-Authored-By: Claude` trailer to
+        commits and PR bodies.
+
+        Defaults to `false`, and that default is load-bearing rather than
+        cosmetic: the STEALTH directive requires that every
+        akeyless-associated artifact be authored AS THE OPERATOR and never
+        reveal AI involvement. An AI trailer on a commit is exactly the
+        disclosure that rule forbids, and it is applied at commit time —
+        after review, where nobody looks.
+
+        Until now the live `~/.claude/settings.json` carried `false` as an
+        unmanaged hand-edit with no option backing it, so the guarantee
+        survived only as long as nobody re-ran the installer or set up a new
+        node. Declaring it here makes it store-derived and reproducible.
+
+        Tier-honest: this is only-mitigated, not unrepresentable — Claude
+        Code can still rewrite settings.json at runtime, and Nix reconverges
+        on rebuild rather than pinning the value continuously.
+      '';
     };
 
     skipDangerousModePermissionPrompt = mkOption {
@@ -705,7 +751,7 @@ in {
       sql     = mkOption { type = types.bool; default = true; description = "Deploy SQL guardrail suite (all engines + migration tools)."; };
       aws-generated = mkOption { type = types.bool; default = true; description = "Deploy auto-generated AWS guardrail suite (2,250 rules from 298 services)."; };
       akeyless-generated = mkOption { type = types.bool; default = true; description = "Deploy auto-generated Akeyless guardrail suite from OpenAPI spec."; };
-      pleme-doctrine = mkOption { type = types.bool; default = true; description = "Deploy the pleme-io doctrine suite: org-CLAUDE.md absolutes expressible as a Bash pattern (in-place stream edits of structured files, hand-run tofu/terraform apply, docker build instead of Nix dockerTools). All warn-severity — shadow-first, promoted to block only on evidence."; };
+      pleme-doctrine = mkOption { type = types.bool; default = true; description = "Deploy the pleme-io doctrine suite: org-CLAUDE.md absolutes expressible as a Bash pattern (in-place stream edits of structured files, hand-run tofu/terraform apply, docker build instead of Nix dockerTools). Two rules BLOCK (`sed-inplace-structured-file` and its chained variant — an in-place stream edit of a .nix/.yaml/.toml/.rs/.json file); the other three warn. Shadow-first applies to the warn tier only; the structured-file rules are already enforcing."; };
     };
 
     extraRules = mkOption {

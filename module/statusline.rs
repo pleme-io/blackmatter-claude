@@ -51,7 +51,7 @@ fn main() {
     let empty = n - filled;
 
     // ── Nord frost ANSI ───────────────────────────────────────────
-    let b = "\x1b[34m"; // frost blue — Nord9
+    let b = "\x1b[34m"; // frost blue — ANSI slot 4 = nord10 (#5E81AC)
     let c = "\x1b[36m"; // frost cyan — Nord8
     let d = "\x1b[90m"; // dim        — Nord3
     let w = "\x1b[37m"; // snow       — Nord5
