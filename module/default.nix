@@ -307,11 +307,12 @@ with lib; let
       inherit (settingsCfg)
         showTurnDuration              # true
         terminalProgressBarEnabled    # true
-        spinnerTipsEnabled            # true
+        spinnerTipsEnabled            # false — fleet default, see options
         respectGitignore              # true
         includeGitInstructions        # true
+        includeCoAuthoredBy           # false — STEALTH; see options
         autoMemoryEnabled             # true
-        cleanupPeriodDays             # 30
+        cleanupPeriodDays             # 90 — fleet default, see options
         prefersReducedMotion          # false
         disableAllHooks               # false
         enableAllProjectMcpServers    # false
