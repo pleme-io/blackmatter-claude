@@ -10,9 +10,12 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # guardrail is a substrate.rust.tool consumer: its only input is
+    # `substrate` (nixpkgs is pre-bound inside the tool kit), so the
+    # dedupe hook is `substrate`, not `nixpkgs`.
     guardrail = {
       url = "github:pleme-io/guardrail";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.substrate.follows = "substrate";
     };
     skill-lint = {
       url = "github:pleme-io/skill-lint";
