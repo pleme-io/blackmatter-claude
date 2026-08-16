@@ -582,6 +582,31 @@ in {
       ) rulesCfg.definitions;
     })
 
+    # CLAUDE.md → ~/.claude/CLAUDE.md, as an OUT-OF-STORE symlink into a live
+    # checkout (see the long note on the option in claude-options.nix for why
+    # this one is not store-rendered like `rules` above).
+    #
+    # `mkOutOfStoreSymlink` takes the path as-is instead of importing it, so
+    # the deployed link resolves to the operator's working tree and an edit
+    # lands without a rebuild — while the content lives in a git repo, which
+    # is the whole point.
+    (mkIf (cfg.enable && cfg.claudeMd.enable && cfg.claudeMd.source != null) {
+      # A relative source would render a link relative to ~/.claude and dangle
+      # silently — the file simply would not load, with no error anywhere.
+      assertions = [
+        {
+          assertion = lib.hasPrefix "/" cfg.claudeMd.source;
+          message =
+            "blackmatter.components.claude.claudeMd.source must be an ABSOLUTE path "
+            + "(got ${cfg.claudeMd.source}). A relative path renders a dangling link "
+            + "under ~/.claude and CLAUDE.md silently stops loading.";
+        }
+      ];
+
+      home.file.".claude/CLAUDE.md".source =
+        config.lib.file.mkOutOfStoreSymlink cfg.claudeMd.source;
+    })
+
     # MCP packages → home.packages (installed to PATH)
     (mkIf (cfg.enable && mcpPkgsCfg.enable) (let
       # Helper: only include package if it exists in pkgs (many MCP servers not yet in nixpkgs)

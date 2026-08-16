@@ -598,6 +598,64 @@ in {
   };
 
   # ══════════════════════════════════════════════════════════════════════
+  # CLAUDE.md — the core-level steering file
+  # ══════════════════════════════════════════════════════════════════════
+  #
+  # `~/.claude/CLAUDE.md` loads in EVERY session across EVERY org, and until
+  # this option existed it was the one steering surface outside the
+  # blackmatter+rebuild loop: a hand-maintained regular file, in no git repo,
+  # rendered by nothing. No history, no review, no redistribution — one disk
+  # loss from gone. Every sibling surface (skills, agents, rules, settings,
+  # MCP) is declared here; this closes the gap.
+  #
+  # ★ IT IS AN OUT-OF-STORE SYMLINK, ON PURPOSE, AND `source` IS A STRING.
+  #
+  # The obvious wiring — `home.file.".claude/CLAUDE.md".source = ./CLAUDE.md`
+  # — copies the file into the nix store and links it read-only. That is
+  # correct for `rules` and `agents`, which change rarely and are authored as
+  # a unit. It is wrong here: the operator edits this file mid-session, and
+  # making each edit a push → flake bump → rebuild loop would push it back out
+  # of maintenance by making maintenance expensive. The observed failure mode
+  # is not "someone edited the store copy", it is "the file stopped being
+  # anywhere at all".
+  #
+  # So the type is `str`, never `types.path`. A `types.path` — or a bare
+  # unquoted `./CLAUDE.md` — is COPIED INTO THE STORE at evaluation, and the
+  # deployed link then points at an immutable snapshot: edits still appear to
+  # work (the file is writable in the checkout) while the session keeps
+  # reading the frozen copy. Green, silent, and wrong. A string stays a plain
+  # filesystem path, so `mkOutOfStoreSymlink` links the live checkout and an
+  # edit is visible to the next session with no rebuild.
+  claudeMd = {
+    enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        Link ~/.claude/CLAUDE.md to a live git checkout via an out-of-store
+        symlink, so the core steering file is version-controlled without
+        making an edit cost a rebuild.
+
+        Default false: the file is operator-personal, so a consumer opts in
+        and supplies its own `source`.
+      '';
+    };
+
+    source = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      example = "/Users/alice/code/github/pleme-io/nix/claude/CLAUDE.md";
+      description = ''
+        ABSOLUTE path to the CLAUDE.md inside a live checkout.
+
+        Deliberately a string, not a path: a `types.path` is copied into the
+        nix store, which freezes the content and silently breaks live editing
+        (see the note above this option). An `assertion` rejects a relative
+        value, which would otherwise render a dangling link.
+      '';
+    };
+  };
+
+  # ══════════════════════════════════════════════════════════════════════
   # LSP
   # ══════════════════════════════════════════════════════════════════════
 
