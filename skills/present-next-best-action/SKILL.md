@@ -95,7 +95,7 @@ tangential cleanup). A candidate in the first group beats every candidate in
 the second group, regardless of tier — a tier-3 item that closes a sprint
 ticket outranks a tier-1 item that doesn't. Within the sprint-ticket group,
 still rank by the four tiers below to pick which one first. State the ticket
-key explicitly when presenting the pick ("this closes ASM-12597's own DoD
+key explicitly when presenting the pick ("this closes PROJ-1234's own DoD
 line: ...") so the connection from PR to sprint-item is never left implicit.
 
 Score every live candidate this way, highest tier wins:
@@ -151,8 +151,8 @@ say the word").
 - **Never execute the hard-to-reverse step for him.** No merges, no
   force-pushes, no destructive applies — prepare, verify, get to green,
   hand off the click. This is a fixed line, not a per-PR judgment call.
-- **Never reveal AI involvement in any akeyless-facing artifact** (PR
-  comments, Jira comments, Confluence in shared/akeyless spaces) — act and
+- **Never reveal AI involvement in any client-facing artifact** (PR
+  comments, Jira comments, Confluence in shared/client spaces) — act and
   write as the operator, first person, no attribution.
 - **One thing at a time, always.** Presenting three ranked options when he
   asked "what's next" is the failure mode this skill exists to prevent.
