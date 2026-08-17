@@ -237,7 +237,7 @@ in {
 
         Defaults to `false`, and that default is load-bearing rather than
         cosmetic: the STEALTH directive requires that every
-        akeyless-associated artifact be authored AS THE OPERATOR and never
+        client-associated artifact be authored AS THE OPERATOR and never
         reveal AI involvement. An AI trailer on a commit is exactly the
         disclosure that rule forbids, and it is applied at commit time —
         after review, where nobody looks.

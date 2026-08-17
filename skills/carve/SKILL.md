@@ -163,7 +163,7 @@ Help the operator populate each scope:
 6. **`story_points` / `target_status`** — only meaningful on
    ticket-backed scopes; carve-jira-sync uses them later. Do not invent the
    points: derive each scope's estimate by anchoring to already-shipped
-   tickets on the same tracker, per `akeyless-ticket-flow`'s "Estimating story
+   tickets on the same tracker, per the ticket-flow skill's "Estimating story
    points from history". A carve fan-out is exactly where feel-based numbers
    creep in, because several scopes get sized in one pass.
 
@@ -273,7 +273,7 @@ ticket, so jira-sync skips them entirely.**
 
 A ticket carve creates or syncs is still a ticket, so it carries the full
 field set — assignee, sprint, labels, points, parent — not just the two
-fields jira-sync writes. `akeyless-ticket-flow` owns that standard; check the
+fields jira-sync writes. The ticket-flow skill owns that standard; check the
 synced issues against it rather than leaving a half-populated ticket on the
 board. If the team's workflow forbids
 automation past an early state, set:
