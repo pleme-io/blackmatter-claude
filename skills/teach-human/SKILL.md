@@ -197,9 +197,9 @@ Re-vet after re-teaching. A rung is not done until a check passes.
 - **Grading politely.** If it missed, say it missed and re-teach. False "got-it"
   compounds.
 
-## Worked example — the Akeyless gateway HA climb
+## Worked example — a secrets-gateway HA climb
 
-A real ladder produced under this skill (topic: "is the Akeyless gateway HA?").
+A real ladder produced under this skill (topic: "is this secrets gateway HA?").
 
 Ladder (shown to the learner first):
 

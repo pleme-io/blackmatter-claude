@@ -87,8 +87,8 @@ some of it gets there through virtual-allocation rules.
 1. Have the FinOps conversation: does this dimension justify its propagation
    cost? Every dimension adds taxonomy mass — only add when the use case is
    actionable.
-2. Update the canonical taxonomy config (the Akeyless overlay, not the generic
-   `pleme-io/tag-forge` config):
+2. Update the canonical taxonomy config (the org's private overlay, not the
+   generic `pleme-io/tag-forge` config):
    - Add to `required` or `optional` list.
    - Add validator definition (`type: string`/`type: enum`).
 3. Validate the config parses:

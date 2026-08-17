@@ -45,7 +45,7 @@ Kubernetes (and Nomad, and PureRaft) distribution. One design, three axes:
 |---|---|
 | `~/code/github/pleme-io/engenho` | the 20-crate runtime workspace |
 | `~/code/github/pleme-io/kikai` | cluster lifecycle backend (k3s VMs via QEMU/kasou) |
-| `~/code/github/pleme-io/engenho-promessa-controllers` | Viggy TargetControllers (SLA/CostBudget/Compliance/CustomerKpi/Security) + Akeyless image-validation platform |
+| `~/code/github/pleme-io/engenho-promessa-controllers` | Viggy TargetControllers (SLA/CostBudget/Compliance/CustomerKpi/Security) + the image-validation platform |
 | `~/code/github/pleme-io/theory/ENGENHO.md` | canonical destination doc (CSE) |
 
 ## Authoritative docs (read these first)

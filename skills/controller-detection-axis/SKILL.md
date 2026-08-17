@@ -201,10 +201,13 @@ When the user describes a new preprocessing / DSL / setup step OR a cryptic down
 
 ## Related memories
 
-* `~/.claude/projects/-Users-luis-d-code-github-akeylesslabs/memory/project_controller_detection_axis.md` — the durable memory.
-* `~/.claude/projects/-Users-luis-d-code-github-akeylesslabs/memory/project_compile_isolation_shield.md` — the `CompileContext` primitive the detector hangs off.
-* `~/.claude/projects/-Users-luis-d-code-github-akeylesslabs/memory/project_ruby_pool_double_load_fix.md` — the bug class that drove the codification.
-* `~/.claude/projects/-Users-luis-d-code-github-akeylesslabs/memory/project_operator_observability_backlog.md` — the slice-4 status/events/metrics consumers.
+Under the project memory directory for the workspace this work was done in
+(`~/.claude/projects/<project>/memory/`):
+
+* `project_controller_detection_axis.md` — the durable memory.
+* `project_compile_isolation_shield.md` — the `CompileContext` primitive the detector hangs off.
+* `project_ruby_pool_double_load_fix.md` — the bug class that drove the codification.
+* `project_operator_observability_backlog.md` — the slice-4 status/events/metrics consumers.
 
 ## Triggers
 

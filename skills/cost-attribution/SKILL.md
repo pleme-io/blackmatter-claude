@@ -90,8 +90,8 @@ questions become SQL queries instead of tickets.
    - Read the stderr stats — `ok` count vs `skipped` count.
    - Sample a few JSONL lines with `head /tmp/t.jsonl | jq` to confirm
      fields landed correctly.
-5. **Add to the org sources config**. The real config lives in a private
-   repo (e.g. `akeyless-finops-config`), not in pleme-io.
+5. **Add to the org sources config**. The real config lives in the org's
+   private FinOps config repo, not in pleme-io.
 
 ### B) Investigating an attribution gap
 

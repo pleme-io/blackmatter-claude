@@ -166,9 +166,9 @@ Always re-vet after re-teaching. The rung is not done until a check passes.
 - **Polite grading.** Passing a miss to avoid friction; guarantees a later
   collapse.
 
-## Worked example — the Akeyless gateway HA ladder
+## Worked example — a secrets-gateway HA ladder
 
-Produced under this method (topic: "how HA is the Akeyless gateway, really?").
+Produced under this method (topic: "how HA is this secrets gateway, really?").
 
 Ladder shown to the learner first:
 
