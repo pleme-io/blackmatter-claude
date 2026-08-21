@@ -457,14 +457,31 @@ in {
       '';
     })
 
-    # Skills → ~/.claude/skills/{name}/SKILL.md (user scope)
-    # Auto-discovers bundled skills from ../skills/ + merges extraSkills
+    # Skills → ~/.claude/skills/{name}/{SKILL.md + assets} (user scope)
+    # Auto-discovers bundled skills from ../skills/ + merges extraSkills.
+    # Bundled skills ship their whole directory (SKILL.md + any sibling asset —
+    # a driver.js, an assets/ or docs/ subtree); extraSkills are single SKILL.md
+    # paths. SKILL.md keeps a per-file key + byte-identical source, so the map
+    # regex on config.home.file still matches and no-asset skills do not re-link.
     (mkIf (cfg.enable && skillsCfg.enable && allSkillFiles != {}) {
-      home.file = lib.mapAttrs' (name: path:
-        lib.nameValuePair ".claude/skills/${name}/SKILL.md" {
-          source = path;
-        }
-      ) allSkillFiles;
+      home.file =
+        let
+          isJunk = n:
+            lib.hasSuffix "~" n || lib.hasSuffix ".backup" n
+            || lib.hasSuffix ".swp" n || n == ".DS_Store" || n == ".git";
+          bundledFiles = lib.foldl' (acc: name:
+            acc // (let e = builtins.readDir (skillsDir + "/${name}"); in
+              lib.listToAttrs (map (entry:
+                lib.nameValuePair ".claude/skills/${name}/${entry}" (
+                  { source = skillsDir + "/${name}/${entry}"; }
+                  // lib.optionalAttrs (e.${entry} == "directory") { recursive = true; }
+                )
+              ) (lib.filter (n: ! isJunk n) (lib.attrNames e))))
+          ) {} bundledSkillNames;
+          extraFiles = lib.mapAttrs' (name: path:
+            lib.nameValuePair ".claude/skills/${name}/SKILL.md" { source = path; }
+          ) skillsCfg.extraSkills;
+        in bundledFiles // extraFiles;
     })
 
     # Guardrail → defensive hooks for Bash tool calls
