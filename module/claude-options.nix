@@ -13,7 +13,12 @@ let
     freeformType = types.attrs;
     options = {
       type = mkOption {
-        type = types.enum [ "command" "http" "prompt" "agent" ];
+        type = types.enum [
+          "command"
+          "http"
+          "prompt"
+          "agent"
+        ];
         description = "Hook handler type: command (shell), http (webhook), prompt (LLM), agent (sub-agent).";
       };
 
@@ -38,13 +43,14 @@ let
 
       hooks = mkOption {
         type = types.listOf (types.submodule hookEntryOpts);
-        default = [];
+        default = [ ];
         description = "Hook entries to run when matcher matches.";
       };
     };
   };
 
-in {
+in
+{
   # ══════════════════════════════════════════════════════════════════════
   # CORE SETTINGS → ~/.claude/settings.json
   # ══════════════════════════════════════════════════════════════════════
@@ -61,7 +67,15 @@ in {
     };
 
     effortLevel = mkOption {
-      type = types.nullOr (types.enum ["low" "medium" "high" "xhigh" "max"]);
+      type = types.nullOr (
+        types.enum [
+          "low"
+          "medium"
+          "high"
+          "xhigh"
+          "max"
+        ]
+      );
       default = null;
       example = "max";
       description = ''
@@ -151,7 +165,12 @@ in {
     };
 
     autoUpdatesChannel = mkOption {
-      type = types.nullOr (types.enum ["stable" "latest"]);
+      type = types.nullOr (
+        types.enum [
+          "stable"
+          "latest"
+        ]
+      );
       default = null;
       description = "Auto-update channel. Irrelevant with Nix-managed package.";
     };
@@ -164,25 +183,25 @@ in {
 
     claudeMdExcludes = mkOption {
       type = types.listOf types.str;
-      default = [];
+      default = [ ];
       description = "Glob patterns to exclude CLAUDE.md files from being loaded.";
     };
 
     env = mkOption {
       type = types.attrsOf types.str;
-      default = {};
+      default = { };
       description = "Environment variables set for all Claude Code sessions.";
     };
 
     companyAnnouncements = mkOption {
       type = types.listOf types.str;
-      default = [];
+      default = [ ];
       description = "Announcements shown in random rotation during sessions.";
     };
 
     availableModels = mkOption {
       type = types.listOf types.str;
-      default = [];
+      default = [ ];
       description = "Restrict which models users can select. Empty = all.";
     };
 
@@ -273,18 +292,22 @@ in {
 
     enabledMcpjsonServers = mkOption {
       type = types.listOf types.str;
-      default = [];
+      default = [ ];
       description = "Specific .mcp.json server names to auto-approve.";
     };
 
     disabledMcpjsonServers = mkOption {
       type = types.listOf types.str;
-      default = [];
+      default = [ ];
       description = "Specific .mcp.json server names to reject.";
     };
 
     teammateMode = mkOption {
-      type = types.enum ["auto" "in-process" "tmux"];
+      type = types.enum [
+        "auto"
+        "in-process"
+        "tmux"
+      ];
       default = "auto";
       description = "Agent teams execution mode: auto, in-process, or tmux.";
     };
@@ -292,7 +315,12 @@ in {
     # ── Auth settings ──
 
     forceLoginMethod = mkOption {
-      type = types.nullOr (types.enum ["claudeai" "console"]);
+      type = types.nullOr (
+        types.enum [
+          "claudeai"
+          "console"
+        ]
+      );
       default = null;
       description = "Force a specific login method.";
     };
@@ -307,7 +335,7 @@ in {
 
     extraSettings = mkOption {
       type = types.attrs;
-      default = {};
+      default = { };
       description = "Arbitrary additional keys merged into ~/.claude/settings.json.";
     };
   };
@@ -318,9 +346,15 @@ in {
 
   permissions = {
     defaultMode = mkOption {
-      type = types.nullOr (types.enum [
-        "default" "acceptEdits" "plan" "dontAsk" "bypassPermissions"
-      ]);
+      type = types.nullOr (
+        types.enum [
+          "default"
+          "acceptEdits"
+          "plan"
+          "dontAsk"
+          "bypassPermissions"
+        ]
+      );
       default = null;
       description = "Default permission mode for new sessions.";
     };
@@ -368,19 +402,19 @@ in {
 
     deny = mkOption {
       type = types.listOf types.str;
-      default = [];
+      default = [ ];
       description = "Tool patterns to block entirely (checked first, highest priority).";
     };
 
     ask = mkOption {
       type = types.listOf types.str;
-      default = [];
+      default = [ ];
       description = "Tool patterns that always require user confirmation.";
     };
 
     additionalDirectories = mkOption {
       type = types.listOf types.str;
-      default = [];
+      default = [ ];
       description = "Extra directories Claude can access beyond project root.";
     };
   };
@@ -422,7 +456,7 @@ in {
 
     excludedCommands = mkOption {
       type = types.listOf types.str;
-      default = [];
+      default = [ ];
       description = "Commands that run outside the sandbox.";
     };
 
@@ -447,19 +481,19 @@ in {
     filesystem = {
       allowWrite = mkOption {
         type = types.listOf types.str;
-        default = [];
+        default = [ ];
         description = "Paths where write access is allowed.";
       };
 
       denyWrite = mkOption {
         type = types.listOf types.str;
-        default = [];
+        default = [ ];
         description = "Paths where write access is denied.";
       };
 
       denyRead = mkOption {
         type = types.listOf types.str;
-        default = [];
+        default = [ ];
         description = "Paths where read access is denied.";
       };
     };
@@ -467,7 +501,7 @@ in {
     network = {
       allowUnixSockets = mkOption {
         type = types.listOf types.str;
-        default = [];
+        default = [ ];
         description = "Unix socket paths that sandboxed commands can access.";
       };
 
@@ -485,7 +519,7 @@ in {
 
       allowedDomains = mkOption {
         type = types.listOf types.str;
-        default = [];
+        default = [ ];
         description = "Domain allowlist for outbound network traffic.";
       };
     };
@@ -497,15 +531,29 @@ in {
 
   hooks = mkOption {
     type = types.attrsOf (types.listOf (types.submodule hookRuleOpts));
-    default = {};
+    default = { };
     example = {
-      PreToolUse = [{
-        matcher = "Bash";
-        hooks = [{ type = "command"; command = "/path/to/validate.sh"; }];
-      }];
-      Stop = [{
-        hooks = [{ type = "command"; command = "/path/to/on-stop.sh"; }];
-      }];
+      PreToolUse = [
+        {
+          matcher = "Bash";
+          hooks = [
+            {
+              type = "command";
+              command = "/path/to/validate.sh";
+            }
+          ];
+        }
+      ];
+      Stop = [
+        {
+          hooks = [
+            {
+              type = "command";
+              command = "/path/to/on-stop.sh";
+            }
+          ];
+        }
+      ];
     };
     description = ''
       Lifecycle hooks mapped to Claude Code events. Each event maps to a list
@@ -534,10 +582,14 @@ in {
 
     bindings = mkOption {
       type = types.attrsOf (types.attrsOf (types.nullOr types.str));
-      default = {};
+      default = { };
       example = {
-        Chat = { "ctrl+e" = "chat:externalEditor"; };
-        Global = { "ctrl+t" = "app:toggleTodos"; };
+        Chat = {
+          "ctrl+e" = "chat:externalEditor";
+        };
+        Global = {
+          "ctrl+t" = "app:toggleTodos";
+        };
       };
       description = "Keybinding overrides by context. Set action to null to unbind.";
     };
@@ -556,7 +608,7 @@ in {
 
     definitions = mkOption {
       type = types.attrsOf types.path;
-      default = {};
+      default = { };
       description = "Custom subagent .md files. Keys = names, values = paths.";
     };
   };
@@ -574,7 +626,7 @@ in {
 
     definitions = mkOption {
       type = types.attrsOf types.path;
-      default = {};
+      default = { };
       description = "Custom output style .md files. Keys = names, values = paths.";
     };
   };
@@ -592,7 +644,7 @@ in {
 
     definitions = mkOption {
       type = types.attrsOf types.path;
-      default = {};
+      default = { };
       description = "Rule .md files. Keys = names, values = paths.";
     };
   };
@@ -666,20 +718,60 @@ in {
       description = "Enable LSP server configuration via ~/.claude/lsp.json.";
     };
 
-    nix.enable = mkOption { type = types.bool; default = true; description = "nixd — Nix language server"; };
-    rust.enable = mkOption { type = types.bool; default = true; description = "rust-analyzer — Rust language server"; };
-    typescript.enable = mkOption { type = types.bool; default = true; description = "typescript-language-server"; };
-    python.enable = mkOption { type = types.bool; default = true; description = "basedpyright — Python language server"; };
-    go.enable = mkOption { type = types.bool; default = true; description = "gopls — Go language server"; };
-    lua.enable = mkOption { type = types.bool; default = true; description = "lua-language-server"; };
-    bash.enable = mkOption { type = types.bool; default = true; description = "bash-language-server"; };
-    zig.enable = mkOption { type = types.bool; default = true; description = "zls — Zig language server"; };
-    ruby.enable = mkOption { type = types.bool; default = true; description = "ruby-lsp — Ruby language server"; };
-    cpp.enable = mkOption { type = types.bool; default = true; description = "clangd — C/C++ language server"; };
+    nix.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "nixd — Nix language server";
+    };
+    rust.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "rust-analyzer — Rust language server";
+    };
+    typescript.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "typescript-language-server";
+    };
+    python.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "basedpyright — Python language server";
+    };
+    go.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "gopls — Go language server";
+    };
+    lua.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "lua-language-server";
+    };
+    bash.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "bash-language-server";
+    };
+    zig.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "zls — Zig language server";
+    };
+    ruby.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "ruby-lsp — Ruby language server";
+    };
+    cpp.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "clangd — C/C++ language server";
+    };
 
     extraServers = mkOption {
       type = types.attrs;
-      default = {};
+      default = { };
       description = "Additional LSP server entries for lsp.json.";
     };
   };
@@ -747,7 +839,7 @@ in {
 
     extraServers = mkOption {
       type = types.attrs;
-      default = {};
+      default = { };
       description = "Additional MCP servers merged on top of anvil-generated and service-level.";
     };
   };
@@ -765,7 +857,7 @@ in {
 
     extraSkills = mkOption {
       type = types.attrsOf types.path;
-      default = {};
+      default = { };
       description = "Additional skill files. Keys = names, values = SKILL.md paths.";
     };
   };
@@ -782,46 +874,218 @@ in {
     };
 
     categories = {
-      filesystem  = mkOption { type = types.bool; default = true; description = "Block destructive filesystem commands (rm -rf /, mkfs)."; };
-      git         = mkOption { type = types.bool; default = true; description = "Block destructive git commands (force push main, reset --hard)."; };
-      database    = mkOption { type = types.bool; default = true; description = "Block destructive SQL (DROP TABLE, TRUNCATE, DELETE without WHERE)."; };
-      kubernetes  = mkOption { type = types.bool; default = true; description = "Block destructive K8s commands (delete namespace, delete --all)."; };
-      nix         = mkOption { type = types.bool; default = true; description = "Warn on Nix garbage collection."; };
-      docker      = mkOption { type = types.bool; default = true; description = "Warn on Docker prune commands."; };
-      secrets     = mkOption { type = types.bool; default = true; description = "Warn on secret exposure patterns."; };
-      terraform   = mkOption { type = types.bool; default = true; description = "Block destructive Terraform/Pulumi/Ansible commands."; };
-      cloud       = mkOption { type = types.bool; default = true; description = "Block destructive cloud CLI commands (AWS, GCP, Azure)."; };
-      flux        = mkOption { type = types.bool; default = true; description = "Block destructive FluxCD/GitOps commands."; };
-      akeyless    = mkOption { type = types.bool; default = true; description = "Block destructive Akeyless CLI commands."; };
-      process     = mkOption { type = types.bool; default = true; description = "Block destructive process/system commands."; };
-      network     = mkOption { type = types.bool; default = true; description = "Block destructive network/firewall commands."; };
-      nosql       = mkOption { type = types.bool; default = true; description = "Block destructive NoSQL/cache commands."; };
+      filesystem = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Block destructive filesystem commands (rm -rf /, mkfs).";
+      };
+      git = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Block destructive git commands (force push main, reset --hard).";
+      };
+      database = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Block destructive SQL (DROP TABLE, TRUNCATE, DELETE without WHERE).";
+      };
+      kubernetes = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Block destructive K8s commands (delete namespace, delete --all).";
+      };
+      nix = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Warn on Nix garbage collection.";
+      };
+      docker = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Warn on Docker prune commands.";
+      };
+      secrets = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Warn on secret exposure patterns.";
+      };
+      terraform = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Block destructive Terraform/Pulumi/Ansible commands.";
+      };
+      cloud = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Block destructive cloud CLI commands (AWS, GCP, Azure).";
+      };
+      flux = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Block destructive FluxCD/GitOps commands.";
+      };
+      akeyless = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Block destructive Akeyless CLI commands.";
+      };
+      process = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Block destructive process/system commands.";
+      };
+      network = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Block destructive network/firewall commands.";
+      };
+      nosql = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Block destructive NoSQL/cache commands.";
+      };
     };
 
     suites = {
-      aws     = mkOption { type = types.bool; default = true; description = "Deploy AWS CLI guardrail suite."; };
-      gcp     = mkOption { type = types.bool; default = true; description = "Deploy GCP CLI guardrail suite."; };
-      azure   = mkOption { type = types.bool; default = true; description = "Deploy Azure CLI guardrail suite."; };
-      akeyless = mkOption { type = types.bool; default = true; description = "Deploy Akeyless CLI guardrail suite."; };
-      process = mkOption { type = types.bool; default = true; description = "Deploy process/system guardrail suite."; };
-      network = mkOption { type = types.bool; default = true; description = "Deploy network/firewall guardrail suite."; };
-      nosql   = mkOption { type = types.bool; default = true; description = "Deploy NoSQL/cache guardrail suite."; };
-      sql     = mkOption { type = types.bool; default = true; description = "Deploy SQL guardrail suite (all engines + migration tools)."; };
-      aws-generated = mkOption { type = types.bool; default = true; description = "Deploy auto-generated AWS guardrail suite (2,250 rules from 298 services)."; };
-      akeyless-generated = mkOption { type = types.bool; default = true; description = "Deploy auto-generated Akeyless guardrail suite from OpenAPI spec."; };
-      pleme-doctrine = mkOption { type = types.bool; default = true; description = "Deploy the pleme-io doctrine suite: org-CLAUDE.md absolutes expressible as a Bash pattern (in-place stream edits of structured files, hand-run tofu/terraform apply, docker build instead of Nix dockerTools). Two rules BLOCK (`sed-inplace-structured-file` and its chained variant — an in-place stream edit of a .nix/.yaml/.toml/.rs/.json file); the other three warn. Shadow-first applies to the warn tier only; the structured-file rules are already enforcing."; };
+      aws = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy AWS CLI guardrail suite.";
+      };
+      gcp = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy GCP CLI guardrail suite.";
+      };
+      azure = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy Azure CLI guardrail suite.";
+      };
+      akeyless = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy Akeyless CLI guardrail suite.";
+      };
+      process = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy process/system guardrail suite.";
+      };
+      network = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy network/firewall guardrail suite.";
+      };
+      nosql = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy NoSQL/cache guardrail suite.";
+      };
+      sql = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy SQL guardrail suite (all engines + migration tools).";
+      };
+      aws-generated = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy auto-generated AWS guardrail suite (2,250 rules from 298 services).";
+      };
+      akeyless-generated = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy auto-generated Akeyless guardrail suite from OpenAPI spec.";
+      };
+      pleme-doctrine = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Deploy the pleme-io doctrine suite: org-CLAUDE.md absolutes expressible as a Bash pattern (in-place stream edits of structured files, hand-run tofu/terraform apply, docker build instead of Nix dockerTools). Two rules BLOCK (`sed-inplace-structured-file` and its chained variant — an in-place stream edit of a .nix/.yaml/.toml/.rs/.json file); the other three warn. Shadow-first applies to the warn tier only; the structured-file rules are already enforcing.";
+      };
     };
 
     extraRules = mkOption {
       type = types.listOf (types.attrsOf types.anything);
-      default = [];
+      default = [ ];
       description = "Additional guardrail rules merged with compiled-in defaults.";
     };
 
     disabledRules = mkOption {
       type = types.listOf types.str;
-      default = [];
+      default = [ ];
       description = "Names of compiled-in rules to disable.";
+    };
+  };
+
+  # ══════════════════════════════════════════════════════════════════════
+  # NOROSHI — signal-fire alerts when the agent is done or waiting
+  # ══════════════════════════════════════════════════════════════════════
+  #
+  # The other axis of the guardrail block above. guardrail is what the agent
+  # must NOT do; noroshi is what the operator must be TOLD. Same shape on
+  # purpose: a typed option surface here, a `~/.config/noroshi/noroshi.yaml`
+  # the module owns, and a Rust binary that owns the type.
+  #
+  # This surface is generic — WHICH events matter and WHERE they go is left
+  # to the consumer. The private values (a webhook secret path, a Discord
+  # user id) belong in a private module, never here.
+
+  noroshi = {
+    enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "Enable noroshi lifecycle alerts (agent done / waiting on you).";
+    };
+
+    webhookUrlFile = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      example = "/Users/you/.config/noroshi/webhook";
+      description = ''
+        Path to a file whose contents are the Discord webhook URL. Read at
+        RUN time, never at eval time — a SOPS-materialised secret must not
+        land in a world-readable Nix store path. Null ⇒ noroshi is deployed
+        and configured but can deliver nothing, and says so via
+        `noroshi check` rather than failing silently.
+      '';
+    };
+
+    mention = mkOption {
+      type = types.str;
+      default = "";
+      example = "<@123456789012345678>";
+      description = "Discord mention prefix on every message. Empty ⇒ none.";
+    };
+
+    host = mkOption {
+      type = types.str;
+      default = "";
+      description = "Machine label, so two workstations are distinguishable in one channel.";
+    };
+
+    events = mkOption {
+      type = types.attrsOf (
+        types.enum [
+          "signal"
+          "silent"
+        ]
+      );
+      default = {
+        Stop = "signal";
+        Notification = "signal";
+        SubagentStop = "silent";
+        SessionEnd = "silent";
+      };
+      description = ''
+        Per-event policy, keyed by Claude Code event name. Known to this
+        build: Stop (main agent finished its turn), Notification (waiting on
+        you), SubagentStop (a background agent finished — chatty),
+        SessionEnd. An event with no entry is `silent`, so a new upstream
+        event never starts paging you.
+
+        Only events set to `signal` get a hook wired at all, so a silent
+        event costs nothing at run time.
+      '';
     };
   };
 
@@ -845,42 +1109,134 @@ in {
     enable = mkEnableOption "MCP server packages installed to PATH";
 
     # Nix ecosystem
-    nixos.enable = mkOption { type = types.bool; default = true; description = "mcp-nixos (native Linux, uvx Darwin)"; };
+    nixos.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "mcp-nixos (native Linux, uvx Darwin)";
+    };
 
     # Version control
-    github.enable = mkOption { type = types.bool; default = true; description = "github-mcp-server"; };
-    gitea.enable = mkOption { type = types.bool; default = false; description = "gitea-mcp-server"; };
+    github.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "github-mcp-server";
+    };
+    gitea.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "gitea-mcp-server";
+    };
 
     # Cloud & Infrastructure
-    kubernetes.enable = mkOption { type = types.bool; default = true; description = "mcp-k8s-go"; };
-    aks.enable = mkOption { type = types.bool; default = false; description = "aks-mcp-server"; };
-    grafana.enable = mkOption { type = types.bool; default = false; description = "mcp-grafana"; };
-    terraform.enable = mkOption { type = types.bool; default = false; description = "terraform-mcp-server"; };
-    fluxcd.enable = mkOption { type = types.bool; default = true; description = "fluxcd-operator-mcp"; };
+    kubernetes.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "mcp-k8s-go";
+    };
+    aks.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "aks-mcp-server";
+    };
+    grafana.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "mcp-grafana";
+    };
+    terraform.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "terraform-mcp-server";
+    };
+    fluxcd.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "fluxcd-operator-mcp";
+    };
 
     # Browser automation
-    playwright.enable = mkOption { type = types.bool; default = false; description = "playwright-mcp"; };
+    playwright.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "playwright-mcp";
+    };
 
     # Development tools
-    languageServer.enable = mkOption { type = types.bool; default = false; description = "mcp-language-server"; };
+    languageServer.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "mcp-language-server";
+    };
 
     # MCP infrastructure
-    mcphost.enable = mkOption { type = types.bool; default = false; description = "mcphost"; };
-    toolhive.enable = mkOption { type = types.bool; default = false; description = "toolhive"; };
-    proxy.enable = mkOption { type = types.bool; default = false; description = "mcp-proxy (Linux only)"; };
-    chatmcp.enable = mkOption { type = types.bool; default = false; description = "chatmcp (Linux only)"; };
+    mcphost.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "mcphost";
+    };
+    toolhive.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "toolhive";
+    };
+    proxy.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "mcp-proxy (Linux only)";
+    };
+    chatmcp.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "chatmcp (Linux only)";
+    };
 
     # Python ecosystem (Linux only)
-    pythonSdk.enable = mkOption { type = types.bool; default = false; description = "python3Packages.mcp (Linux only)"; };
-    fastmcp.enable = mkOption { type = types.bool; default = false; description = "python3Packages.fastmcp (Linux only)"; };
-    mcpadapt.enable = mkOption { type = types.bool; default = false; description = "python3Packages.mcpadapt (Linux only)"; };
-    docling.enable = mkOption { type = types.bool; default = false; description = "python3Packages.docling-mcp (Linux only)"; };
-    fastapiMcp.enable = mkOption { type = types.bool; default = false; description = "python3Packages.fastapi-mcp (Linux only)"; };
-    djangoMcp.enable = mkOption { type = types.bool; default = false; description = "python3Packages.django-mcp-server (Linux only)"; };
+    pythonSdk.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "python3Packages.mcp (Linux only)";
+    };
+    fastmcp.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "python3Packages.fastmcp (Linux only)";
+    };
+    mcpadapt.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "python3Packages.mcpadapt (Linux only)";
+    };
+    docling.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "python3Packages.docling-mcp (Linux only)";
+    };
+    fastapiMcp.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "python3Packages.fastapi-mcp (Linux only)";
+    };
+    djangoMcp.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "python3Packages.django-mcp-server (Linux only)";
+    };
 
     # Haskell ecosystem (disabled by default — often broken)
-    haskellMcp.enable = mkOption { type = types.bool; default = false; description = "haskellPackages.mcp (often broken)"; };
-    haskellMcpServer.enable = mkOption { type = types.bool; default = false; description = "haskellPackages.mcp-server (often broken)"; };
-    ptyMcpServer.enable = mkOption { type = types.bool; default = false; description = "haskellPackages.pty-mcp-server (often broken)"; };
+    haskellMcp.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "haskellPackages.mcp (often broken)";
+    };
+    haskellMcpServer.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "haskellPackages.mcp-server (often broken)";
+    };
+    ptyMcpServer.enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = "haskellPackages.pty-mcp-server (often broken)";
+    };
   };
 }
