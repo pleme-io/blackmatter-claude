@@ -27,7 +27,8 @@
   pkgs,
   ...
 }:
-with lib; let
+with lib;
+let
   cfg = config.blackmatter.components.claude;
   settingsCfg = cfg.settings;
   permsCfg = cfg.permissions;
@@ -43,6 +44,7 @@ with lib; let
   mcpPkgsCfg = cfg.mcpPackages;
   skillsCfg = cfg.skills;
   guardrailCfg = cfg.guardrail;
+  noroshiCfg = cfg.noroshi;
   themeCfg = cfg.theme;
 
   inherit (pkgs.stdenv.hostPlatform) isLinux isDarwin;
@@ -54,11 +56,12 @@ with lib; let
 
   # Conditional attribute helpers (also available via substrate hm-typed-config-helpers.nix)
   optAttr = name: value: optionalAttrs (value != null) { ${name} = value; };
-  optList = name: value: optionalAttrs (value != []) { ${name} = value; };
-  optNested = name: value: optionalAttrs (value != {}) { ${name} = value; };
+  optList = name: value: optionalAttrs (value != [ ]) { ${name} = value; };
+  optNested = name: value: optionalAttrs (value != { }) { ${name} = value; };
 
   # Recursively strip null values from attrsets (prevents "Expected X, but received null" in Claude/Cursor settings)
-  stripNulls = value:
+  stripNulls =
+    value:
     if builtins.isAttrs value then
       lib.filterAttrs (_: v: v != null) (builtins.mapAttrs (_: stripNulls) value)
     else if builtins.isList value then
@@ -69,34 +72,39 @@ with lib; let
   # ── Bundled skills (auto-discovered from ../skills/) ────────────────
   skillsDir = ../skills;
   bundledSkillNames =
-    if builtins.pathExists skillsDir
-    then builtins.attrNames (lib.filterAttrs (_: t: t == "directory") (builtins.readDir skillsDir))
-    else [];
-  bundledSkillFiles = lib.listToAttrs (map (name:
-    lib.nameValuePair name (skillsDir + "/${name}/SKILL.md")
-  ) bundledSkillNames);
+    if builtins.pathExists skillsDir then
+      builtins.attrNames (lib.filterAttrs (_: t: t == "directory") (builtins.readDir skillsDir))
+    else
+      [ ];
+  bundledSkillFiles = lib.listToAttrs (
+    map (name: lib.nameValuePair name (skillsDir + "/${name}/SKILL.md")) bundledSkillNames
+  );
   allSkillFiles = bundledSkillFiles // skillsCfg.extraSkills;
 
   # ── LSP server map ──────────────────────────────────────────────────────
 
   serverEntries =
-    {}
+    { }
     // optionalAttrs lspCfg.nix.enable {
       nix = {
         command = "nixd";
-        extensionToLanguage = {".nix" = "nix";};
+        extensionToLanguage = {
+          ".nix" = "nix";
+        };
       };
     }
     // optionalAttrs lspCfg.rust.enable {
       rust = {
         command = "rust-analyzer";
-        extensionToLanguage = {".rs" = "rust";};
+        extensionToLanguage = {
+          ".rs" = "rust";
+        };
       };
     }
     // optionalAttrs lspCfg.typescript.enable {
       typescript = {
         command = "typescript-language-server";
-        args = ["--stdio"];
+        args = [ "--stdio" ];
         extensionToLanguage = {
           ".ts" = "typescript";
           ".tsx" = "typescriptreact";
@@ -108,26 +116,32 @@ with lib; let
     // optionalAttrs lspCfg.python.enable {
       python = {
         command = "basedpyright-langserver";
-        args = ["--stdio"];
-        extensionToLanguage = {".py" = "python";};
+        args = [ "--stdio" ];
+        extensionToLanguage = {
+          ".py" = "python";
+        };
       };
     }
     // optionalAttrs lspCfg.go.enable {
       go = {
         command = "gopls";
-        extensionToLanguage = {".go" = "go";};
+        extensionToLanguage = {
+          ".go" = "go";
+        };
       };
     }
     // optionalAttrs lspCfg.lua.enable {
       lua = {
         command = "lua-language-server";
-        extensionToLanguage = {".lua" = "lua";};
+        extensionToLanguage = {
+          ".lua" = "lua";
+        };
       };
     }
     // optionalAttrs lspCfg.bash.enable {
       bash = {
         command = "bash-language-server";
-        args = ["start"];
+        args = [ "start" ];
         extensionToLanguage = {
           ".sh" = "shellscript";
           ".bash" = "shellscript";
@@ -137,19 +151,27 @@ with lib; let
     // optionalAttrs lspCfg.zig.enable {
       zig = {
         command = "zls";
-        extensionToLanguage = {".zig" = "zig";};
+        extensionToLanguage = {
+          ".zig" = "zig";
+        };
       };
     }
     // optionalAttrs lspCfg.ruby.enable {
       ruby = {
         command = "ruby-lsp";
-        extensionToLanguage = {".rb" = "ruby";};
+        extensionToLanguage = {
+          ".rb" = "ruby";
+        };
       };
     }
     // optionalAttrs lspCfg.cpp.enable {
       cpp = {
         command = "clangd";
-        args = ["--background-index" "--clang-tidy" "--header-insertion=iwyu"];
+        args = [
+          "--background-index"
+          "--clang-tidy"
+          "--header-insertion=iwyu"
+        ];
         extensionToLanguage = {
           ".c" = "c";
           ".h" = "c";
@@ -168,11 +190,11 @@ with lib; let
 
   # Service-level MCP servers (zoekt, codesearch, amimori) still read from services.*
   serviceMcpServers =
-    {}
-    // optionalAttrs (mcpCfg.zoektMcp.enable && config.services.zoekt.mcp.serverEntry != {}) {
+    { }
+    // optionalAttrs (mcpCfg.zoektMcp.enable && config.services.zoekt.mcp.serverEntry != { }) {
       zoekt = config.services.zoekt.mcp.serverEntry;
     }
-    // optionalAttrs (mcpCfg.codesearch.enable && config.services.codesearch.mcp.serverEntry != {}) {
+    // optionalAttrs (mcpCfg.codesearch.enable && config.services.codesearch.mcp.serverEntry != { }) {
       # Repath codesearch's MCP to the pleme-io workspace root. Its serverEntry
       # ships `args = ["mcp"]` with no project path, so `codesearch mcp` binds to
       # whatever cwd Claude Code launched it from (historically drzln/curupira),
@@ -181,39 +203,40 @@ with lib; let
       # ~/code/github/pleme-io. CODESEARCH_LMDB_MAP_SIZE_MB (from the base entry)
       # is preserved by the `//` merge.
       codesearch =
-        let base = config.services.codesearch.mcp.serverEntry;
-        in base // {
+        let
+          base = config.services.codesearch.mcp.serverEntry;
+        in
+        base
+        // {
           args = (base.args or [ "mcp" ]) ++ [ "${config.home.homeDirectory}/code/github/pleme-io" ];
         };
     }
-    // optionalAttrs (mcpCfg.amimori.enable && config.services.amimori.mcp.serverEntry != {}) {
+    // optionalAttrs (mcpCfg.amimori.enable && config.services.amimori.mcp.serverEntry != { }) {
       amimori = config.services.amimori.mcp.serverEntry;
     }
-    // optionalAttrs (mcpCfg.kurageMcp.enable && config.services.kurage.mcp.serverEntry != {}) {
+    // optionalAttrs (mcpCfg.kurageMcp.enable && config.services.kurage.mcp.serverEntry != { }) {
       kurage = config.services.kurage.mcp.serverEntry;
     }
-    // optionalAttrs (mcpCfg.shinryuMcp.enable && config.services.shinryu.mcp.serverEntry != {}) {
+    // optionalAttrs (mcpCfg.shinryuMcp.enable && config.services.shinryu.mcp.serverEntry != { }) {
       shinryu = config.services.shinryu.mcp.serverEntry;
     }
     # mado — the GPU terminal's full session/pane/output/attention/vigy/tear
     # tool surface, so Claude Code can fully control mado (CLAUDE-FOR-MADO.md).
     # Reads the hermetic entry from blackmatter-mado; `or {}` keeps eval safe if
     # that module isn't on the node.
-    // optionalAttrs (mcpCfg.madoMcp.enable && (config.blackmatter.components.mado.mcp.serverEntry or {}) != {}) {
-      mado = config.blackmatter.components.mado.mcp.serverEntry;
-    };
+    // optionalAttrs (
+      mcpCfg.madoMcp.enable && (config.blackmatter.components.mado.mcp.serverEntry or { }) != { }
+    ) { mado = config.blackmatter.components.mado.mcp.serverEntry; };
 
   mcpServers = anvilServers // serviceMcpServers // mcpCfg.extraServers;
 
   # ── Managed MCP config (deep-merged into ~/.claude.json) ──────────────
 
-  managedConfig =
-    optionalAttrs (mcpServers != {}) {inherit mcpServers;};
-  hasManagedConfig = managedConfig != {};
+  managedConfig = optionalAttrs (mcpServers != { }) { inherit mcpServers; };
+  hasManagedConfig = managedConfig != { };
 
   # JSON blob written to a nix store file for the activation script
-  managedConfigFile = pkgs.writeText "claude-managed-config.json"
-    (builtins.toJSON managedConfig);
+  managedConfigFile = pkgs.writeText "claude-managed-config.json" (builtins.toJSON managedConfig);
 
   # Claude Code reads MCP servers from ~/.claude.json (user scope)
   claudeConfigPath = "${config.home.homeDirectory}/.claude.json";
@@ -221,20 +244,32 @@ with lib; let
   # ── Config merge tool (Rust, zero deps) ─────────────────────────────
   # Deep-merges Nix-managed JSON into user config files and removes
   # stale entries with missing binaries (GC'd nix store paths).
-  configMergeBinary = pkgs.runCommand "claude-config-merge" {
-    nativeBuildInputs = [ pkgs.rustc pkgs.stdenv.cc ];
-  } ''
-    mkdir -p $out/bin
-    rustc --edition 2021 -O -o $out/bin/claude-config-merge ${./claude-config-merge.rs}
-  '';
+  configMergeBinary =
+    pkgs.runCommand "claude-config-merge"
+      {
+        nativeBuildInputs = [
+          pkgs.rustc
+          pkgs.stdenv.cc
+        ];
+      }
+      ''
+        mkdir -p $out/bin
+        rustc --edition 2021 -O -o $out/bin/claude-config-merge ${./claude-config-merge.rs}
+      '';
 
   # ── Nord frost statusline (Rust, zero deps) ─────────────────────────
-  statuslineBinary = pkgs.runCommand "claude-nord-statusline" {
-    nativeBuildInputs = [ pkgs.rustc pkgs.stdenv.cc ];
-  } ''
-    mkdir -p $out/bin
-    rustc --edition 2021 -O -o $out/bin/claude-nord-statusline ${./statusline.rs}
-  '';
+  statuslineBinary =
+    pkgs.runCommand "claude-nord-statusline"
+      {
+        nativeBuildInputs = [
+          pkgs.rustc
+          pkgs.stdenv.cc
+        ];
+      }
+      ''
+        mkdir -p $out/bin
+        rustc --edition 2021 -O -o $out/bin/claude-nord-statusline ${./statusline.rs}
+      '';
 
   # ── Managed settings (deep-merged into ~/.claude/settings.json) ─────
   #
@@ -249,125 +284,127 @@ with lib; let
   # `mcp.madoMcp.autoAllow` so Claude can OBSERVE mado without prompting. The
   # mutating tools are deliberately excluded (they stay on the ask path). See
   # CLAUDE-FOR-MADO.md.
-  madoAutoAllowTools =
-    optionals (mcpCfg.madoMcp.enable && mcpCfg.madoMcp.autoAllow) [
-      "mcp__mado__status"
-      "mcp__mado__list_sessions"
-      "mcp__mado__get_output"
-      "mcp__mado__snapshot_grid"
-      "mcp__mado__recent_dirs_list"
-      "mcp__mado__frame_perf"
-      "mcp__mado__version"
-    ];
+  madoAutoAllowTools = optionals (mcpCfg.madoMcp.enable && mcpCfg.madoMcp.autoAllow) [
+    "mcp__mado__status"
+    "mcp__mado__list_sessions"
+    "mcp__mado__get_output"
+    "mcp__mado__snapshot_grid"
+    "mcp__mado__recent_dirs_list"
+    "mcp__mado__frame_perf"
+    "mcp__mado__version"
+  ];
 
   permsObj =
-    {}
+    { }
     // optAttr "defaultMode" permsCfg.defaultMode
     // optList "allow" (permsCfg.allow ++ madoAutoAllowTools)
     // optList "deny" permsCfg.deny
     // optList "ask" permsCfg.ask
     // optList "additionalDirectories" permsCfg.additionalDirectories;
 
-  attrObj =
-    {}
-    // optAttr "commit" attrCfg.commit
-    // optAttr "pr" attrCfg.pr;
+  attrObj = { } // optAttr "commit" attrCfg.commit // optAttr "pr" attrCfg.pr;
 
   sandboxFsObj =
-    {}
+    { }
     // optList "allowWrite" sandboxCfg.filesystem.allowWrite
     // optList "denyWrite" sandboxCfg.filesystem.denyWrite
     // optList "denyRead" sandboxCfg.filesystem.denyRead;
 
-  sandboxNetObj =
-    {
-      # Confirmed defaults — always written
-      inherit (sandboxCfg.network) allowAllUnixSockets allowLocalBinding;
-    }
-    // optList "allowUnixSockets" sandboxCfg.network.allowUnixSockets
-    // optList "allowedDomains" sandboxCfg.network.allowedDomains;
+  sandboxNetObj = {
+    # Confirmed defaults — always written
+    inherit (sandboxCfg.network) allowAllUnixSockets allowLocalBinding;
+  }
+  // optList "allowUnixSockets" sandboxCfg.network.allowUnixSockets
+  // optList "allowedDomains" sandboxCfg.network.allowedDomains;
 
-  sandboxObj =
-    {
-      # Confirmed defaults — always written
-      inherit (sandboxCfg) enabled autoAllowBashIfSandboxed
-        allowUnsandboxedCommands enableWeakerNestedSandbox
-        enableWeakerNetworkIsolation;
-    }
-    // optList "excludedCommands" sandboxCfg.excludedCommands
-    // optNested "filesystem" sandboxFsObj
-    // optNested "network" sandboxNetObj;
+  sandboxObj = {
+    # Confirmed defaults — always written
+    inherit (sandboxCfg)
+      enabled
+      autoAllowBashIfSandboxed
+      allowUnsandboxedCommands
+      enableWeakerNestedSandbox
+      enableWeakerNetworkIsolation
+      ;
+  }
+  // optList "excludedCommands" sandboxCfg.excludedCommands
+  // optNested "filesystem" sandboxFsObj
+  // optNested "network" sandboxNetObj;
 
-  managedSettings =
-    {
-      # ── Confirmed defaults (always written to settings.json) ──
-      # These match Claude Code's built-in defaults per the JSON schema.
-      # Setting them explicitly makes the config fully reproducible and
-      # visible at the Nix layer without consulting external docs.
-      inherit (settingsCfg)
-        showTurnDuration              # true
-        terminalProgressBarEnabled    # true
-        spinnerTipsEnabled            # false — fleet default, see options
-        respectGitignore              # true
-        includeGitInstructions        # true
-        includeCoAuthoredBy           # false — STEALTH; see options
-        autoMemoryEnabled             # true
-        cleanupPeriodDays             # 90 — fleet default, see options
-        prefersReducedMotion          # false
-        disableAllHooks               # false
-        enableAllProjectMcpServers    # false
-        teammateMode;                 # "auto"
-    }
-    # ── No confirmed default (only written when explicitly set) ──
-    // optAttr "model" settingsCfg.model
-    // optAttr "effortLevel" settingsCfg.effortLevel
-    // optAttr "language" settingsCfg.language
-    // optAttr "outputStyle" settingsCfg.outputStyle
-    // optAttr "apiKeyHelper" settingsCfg.apiKeyHelper
-    // optAttr "alwaysThinkingEnabled" settingsCfg.alwaysThinkingEnabled
-    // optAttr "fastModePerSessionOptIn" settingsCfg.fastModePerSessionOptIn
-    // optAttr "autoUpdatesChannel" settingsCfg.autoUpdatesChannel
-    // optAttr "plansDirectory" settingsCfg.plansDirectory
-    // optList "claudeMdExcludes" settingsCfg.claudeMdExcludes
-    // optNested "env" settingsCfg.env
-    // optList "companyAnnouncements" settingsCfg.companyAnnouncements
-    // optList "availableModels" settingsCfg.availableModels
-    // optAttr "skipDangerousModePermissionPrompt" settingsCfg.skipDangerousModePermissionPrompt
-    // optList "enabledMcpjsonServers" settingsCfg.enabledMcpjsonServers
-    // optList "disabledMcpjsonServers" settingsCfg.disabledMcpjsonServers
-    # Auth
-    // optAttr "forceLoginMethod" settingsCfg.forceLoginMethod
-    // optAttr "forceLoginOrgUUID" settingsCfg.forceLoginOrgUUID
-    # Nested objects
-    // optNested "permissions" permsObj
-    // optNested "attribution" attrObj
-    // { sandbox = sandboxObj; }
-    // optNested "hooks" (stripNulls hooksCfg)
-    # Statusline
-    // optionalAttrs themeCfg.statusline.enable {
-      statusLine = {
-        type = "command";
-        command = "${statuslineBinary}/bin/claude-nord-statusline";
-      };
-    }
-    # Escape hatch
-    // settingsCfg.extraSettings;
+  managedSettings = {
+    # ── Confirmed defaults (always written to settings.json) ──
+    # These match Claude Code's built-in defaults per the JSON schema.
+    # Setting them explicitly makes the config fully reproducible and
+    # visible at the Nix layer without consulting external docs.
+    inherit (settingsCfg)
+      showTurnDuration # true
+      terminalProgressBarEnabled # true
+      spinnerTipsEnabled # false — fleet default, see options
+      respectGitignore # true
+      includeGitInstructions # true
+      includeCoAuthoredBy # false — STEALTH; see options
+      autoMemoryEnabled # true
+      cleanupPeriodDays # 90 — fleet default, see options
+      prefersReducedMotion # false
+      disableAllHooks # false
+      enableAllProjectMcpServers # false
+      teammateMode
+      ; # "auto"
+  }
+  # ── No confirmed default (only written when explicitly set) ──
+  // optAttr "model" settingsCfg.model
+  // optAttr "effortLevel" settingsCfg.effortLevel
+  // optAttr "language" settingsCfg.language
+  // optAttr "outputStyle" settingsCfg.outputStyle
+  // optAttr "apiKeyHelper" settingsCfg.apiKeyHelper
+  // optAttr "alwaysThinkingEnabled" settingsCfg.alwaysThinkingEnabled
+  // optAttr "fastModePerSessionOptIn" settingsCfg.fastModePerSessionOptIn
+  // optAttr "autoUpdatesChannel" settingsCfg.autoUpdatesChannel
+  // optAttr "plansDirectory" settingsCfg.plansDirectory
+  // optList "claudeMdExcludes" settingsCfg.claudeMdExcludes
+  // optNested "env" settingsCfg.env
+  // optList "companyAnnouncements" settingsCfg.companyAnnouncements
+  // optList "availableModels" settingsCfg.availableModels
+  // optAttr "skipDangerousModePermissionPrompt" settingsCfg.skipDangerousModePermissionPrompt
+  // optList "enabledMcpjsonServers" settingsCfg.enabledMcpjsonServers
+  // optList "disabledMcpjsonServers" settingsCfg.disabledMcpjsonServers
+  # Auth
+  // optAttr "forceLoginMethod" settingsCfg.forceLoginMethod
+  // optAttr "forceLoginOrgUUID" settingsCfg.forceLoginOrgUUID
+  # Nested objects
+  // optNested "permissions" permsObj
+  // optNested "attribution" attrObj
+  // {
+    sandbox = sandboxObj;
+  }
+  // optNested "hooks" (stripNulls hooksCfg)
+  # Statusline
+  // optionalAttrs themeCfg.statusline.enable {
+    statusLine = {
+      type = "command";
+      command = "${statuslineBinary}/bin/claude-nord-statusline";
+    };
+  }
+  # Escape hatch
+  // settingsCfg.extraSettings;
 
-  hasManagedSettings = managedSettings != {};
-  managedSettingsFile = pkgs.writeText "claude-managed-settings.json"
-    (builtins.toJSON managedSettings);
+  hasManagedSettings = managedSettings != { };
+  managedSettingsFile = pkgs.writeText "claude-managed-settings.json" (
+    builtins.toJSON managedSettings
+  );
 
   claudeSettingsPath = "${config.home.homeDirectory}/.claude/settings.json";
 
   # ── Keybindings JSON ─────────────────────────────────────────────────
-  keybindingsJson =
-    { bindings = map (context: {
-        inherit context;
-        bindings = keybindingsCfg.bindings.${context};
-      }) (attrNames keybindingsCfg.bindings);
-    };
+  keybindingsJson = {
+    bindings = map (context: {
+      inherit context;
+      bindings = keybindingsCfg.bindings.${context};
+    }) (attrNames keybindingsCfg.bindings);
+  };
 
-in {
+in
+{
   options.blackmatter.components.claude = {
     enable = mkEnableOption "Claude Code configuration";
 
@@ -384,15 +421,14 @@ in {
     # All typed options imported from claude-options.nix
     # Covers: settings, permissions, attribution, sandbox, hooks (typed submodules),
     # keybindings, agents, outputStyles, rules, lsp, mcp, skills, theme, mcpPackages
-  } // claudeOpts;
+  }
+  // claudeOpts;
 
   # ── Config ───────────────────────────────────────────────────────────
 
   config = mkMerge [
     # Claude Code package installation
-    (mkIf cfg.enable {
-      home.packages = [ cfg.package ];
-    })
+    (mkIf cfg.enable { home.packages = [ cfg.package ]; })
 
     # Doctrine flow: anvil → claude. Each key in
     # `anvil.translatedSettings.claude` is applied to
@@ -415,32 +451,21 @@ in {
     # are unreferenced and harmless.
     (
       let
-        anvilClaudeSettings =
-          config.blackmatter.components.anvil.translatedSettings.claude or {};
-      in {
-        blackmatter.components.claude.settings =
-          lib.mapAttrs (_: lib.mkDefault) anvilClaudeSettings;
+        anvilClaudeSettings = config.blackmatter.components.anvil.translatedSettings.claude or { };
+      in
+      {
+        blackmatter.components.claude.settings = lib.mapAttrs (_: lib.mkDefault) anvilClaudeSettings;
       }
     )
 
     # Auto-enable service-level MCP flags when the claude module enables them.
     # This bridges the gap between blackmatter.components.claude.mcp.zoektMcp.enable
     # and services.zoekt.mcp.enable (which gates serverEntry generation).
-    (mkIf (cfg.enable && mcpCfg.zoektMcp.enable) {
-      services.zoekt.mcp.enable = mkDefault true;
-    })
-    (mkIf (cfg.enable && mcpCfg.codesearch.enable) {
-      services.codesearch.mcp.enable = mkDefault true;
-    })
-    (mkIf (cfg.enable && mcpCfg.amimori.enable) {
-      services.amimori.mcp.enable = mkDefault true;
-    })
-    (mkIf (cfg.enable && mcpCfg.kurageMcp.enable) {
-      services.kurage.mcp.enable = mkDefault true;
-    })
-    (mkIf (cfg.enable && mcpCfg.shinryuMcp.enable) {
-      services.shinryu.mcp.enable = mkDefault true;
-    })
+    (mkIf (cfg.enable && mcpCfg.zoektMcp.enable) { services.zoekt.mcp.enable = mkDefault true; })
+    (mkIf (cfg.enable && mcpCfg.codesearch.enable) { services.codesearch.mcp.enable = mkDefault true; })
+    (mkIf (cfg.enable && mcpCfg.amimori.enable) { services.amimori.mcp.enable = mkDefault true; })
+    (mkIf (cfg.enable && mcpCfg.kurageMcp.enable) { services.kurage.mcp.enable = mkDefault true; })
+    (mkIf (cfg.enable && mcpCfg.shinryuMcp.enable) { services.shinryu.mcp.enable = mkDefault true; })
 
     # LSP config → ~/.claude/lsp.json
     (mkIf (cfg.enable && lspCfg.enable) {
@@ -450,7 +475,7 @@ in {
     # MCP servers → deep-merged into ~/.claude.json (user scope)
     # Uses Rust binary for robust merge + stale path cleanup
     (mkIf (cfg.enable && hasManagedConfig) {
-      home.activation.claude-mcp-config = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      home.activation.claude-mcp-config = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         run ${configMergeBinary}/bin/claude-config-merge \
           "${managedConfigFile}" \
           --config "${claudeConfigPath}"
@@ -463,25 +488,41 @@ in {
     # a driver.js, an assets/ or docs/ subtree); extraSkills are single SKILL.md
     # paths. SKILL.md keeps a per-file key + byte-identical source, so the map
     # regex on config.home.file still matches and no-asset skills do not re-link.
-    (mkIf (cfg.enable && skillsCfg.enable && allSkillFiles != {}) {
+    (mkIf (cfg.enable && skillsCfg.enable && allSkillFiles != { }) {
       home.file =
         let
-          isJunk = n:
-            lib.hasSuffix "~" n || lib.hasSuffix ".backup" n
-            || lib.hasSuffix ".swp" n || n == ".DS_Store" || n == ".git";
-          bundledFiles = lib.foldl' (acc: name:
-            acc // (let e = builtins.readDir (skillsDir + "/${name}"); in
-              lib.listToAttrs (map (entry:
-                lib.nameValuePair ".claude/skills/${name}/${entry}" (
-                  { source = skillsDir + "/${name}/${entry}"; }
-                  // lib.optionalAttrs (e.${entry} == "directory") { recursive = true; }
-                )
-              ) (lib.filter (n: ! isJunk n) (lib.attrNames e))))
-          ) {} bundledSkillNames;
-          extraFiles = lib.mapAttrs' (name: path:
-            lib.nameValuePair ".claude/skills/${name}/SKILL.md" { source = path; }
+          isJunk =
+            n:
+            lib.hasSuffix "~" n
+            || lib.hasSuffix ".backup" n
+            || lib.hasSuffix ".swp" n
+            || n == ".DS_Store"
+            || n == ".git";
+          bundledFiles = lib.foldl' (
+            acc: name:
+            acc
+            // (
+              let
+                e = builtins.readDir (skillsDir + "/${name}");
+              in
+              lib.listToAttrs (
+                map (
+                  entry:
+                  lib.nameValuePair ".claude/skills/${name}/${entry}" (
+                    {
+                      source = skillsDir + "/${name}/${entry}";
+                    }
+                    // lib.optionalAttrs (e.${entry} == "directory") { recursive = true; }
+                  )
+                ) (lib.filter (n: !isJunk n) (lib.attrNames e))
+              )
+            )
+          ) { } bundledSkillNames;
+          extraFiles = lib.mapAttrs' (
+            name: path: lib.nameValuePair ".claude/skills/${name}/SKILL.md" { source = path; }
           ) skillsCfg.extraSkills;
-        in bundledFiles // extraFiles;
+        in
+        bundledFiles // extraFiles;
     })
 
     # Guardrail → defensive hooks for Bash tool calls
@@ -508,12 +549,30 @@ in {
           extraRules = guardrailCfg.extraRules;
           disabledRules = guardrailCfg.disabledRules;
         };
-      } // lib.foldl' (acc: suite:
-        acc // lib.optionalAttrs guardrailCfg.suites.${suite} {
-          ".config/guardrail/rules.d/${suite}.yaml".source =
-            "${pkgs.guardrail-rules}/${suite}.yaml";
-        }
-      ) {} ["aws" "gcp" "azure" "akeyless" "process" "network" "nosql" "sql" "aws-generated" "akeyless-generated" "pleme-doctrine"];
+      }
+      //
+        lib.foldl'
+          (
+            acc: suite:
+            acc
+            // lib.optionalAttrs guardrailCfg.suites.${suite} {
+              ".config/guardrail/rules.d/${suite}.yaml".source = "${pkgs.guardrail-rules}/${suite}.yaml";
+            }
+          )
+          { }
+          [
+            "aws"
+            "gcp"
+            "azure"
+            "akeyless"
+            "process"
+            "network"
+            "nosql"
+            "sql"
+            "aws-generated"
+            "akeyless-generated"
+            "pleme-doctrine"
+          ];
 
       # PreToolUse hooks:
       #   • Bash       → guardrail check (block destructive commands)
@@ -523,17 +582,21 @@ in {
       blackmatter.components.claude.hooks.PreToolUse = [
         {
           matcher = "Bash";
-          hooks = [{
-            type = "command";
-            command = "${pkgs.guardrail}/bin/guardrail check";
-          }];
+          hooks = [
+            {
+              type = "command";
+              command = "${pkgs.guardrail}/bin/guardrail check";
+            }
+          ];
         }
         {
           matcher = "Grep|Glob";
-          hooks = [{
-            type = "command";
-            command = "${pkgs.guardrail}/bin/guardrail search-nudge";
-          }];
+          hooks = [
+            {
+              type = "command";
+              command = "${pkgs.guardrail}/bin/guardrail search-nudge";
+            }
+          ];
         }
       ];
 
@@ -542,24 +605,57 @@ in {
       blackmatter.components.claude.hooks.PostToolUse = [
         {
           matcher = "Grep|Glob";
-          hooks = [{
-            type = "command";
-            command = "${pkgs.guardrail}/bin/guardrail search-advise";
-          }];
+          hooks = [
+            {
+              type = "command";
+              command = "${pkgs.guardrail}/bin/guardrail search-advise";
+            }
+          ];
         }
       ];
 
       # Pre-compile rules cache after deployment for fast check (10ms vs 217ms)
-      home.activation.guardrail-compile = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      home.activation.guardrail-compile = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         run ${pkgs.guardrail}/bin/guardrail compile
       '';
+    })
+
+    # Noroshi → signal-fire alerts when the agent is done or waiting.
+    # The guardrail block's mirror image: same file-owned-by-module /
+    # type-owned-by-binary seam, opposite axis (what the operator must be
+    # TOLD, not what the agent must not DO).
+    (mkIf (cfg.enable && noroshiCfg.enable) {
+      home.file.".config/noroshi/noroshi.yaml".text = builtins.toJSON (
+        {
+          mention = noroshiCfg.mention;
+          host = noroshiCfg.host;
+          events = noroshiCfg.events;
+        }
+        // lib.optionalAttrs (noroshiCfg.webhookUrlFile != null) {
+          webhook_url_file = noroshiCfg.webhookUrlFile;
+        }
+      );
+
+      # One hook per SIGNALLED event only. A `silent` event is not wired at
+      # all, so turning one off costs nothing at run time rather than
+      # spawning a process that decides to say nothing.
+      blackmatter.components.claude.hooks = lib.mapAttrs (_: _: [
+        {
+          hooks = [
+            {
+              type = "command";
+              command = "${pkgs.noroshi}/bin/noroshi hook";
+            }
+          ];
+        }
+      ]) (lib.filterAttrs (_: policy: policy == "signal") noroshiCfg.events);
     })
 
     # Settings → deep-merged into ~/.claude/settings.json
     # Consolidates all settings: core, permissions, hooks, sandbox,
     # attribution, statusline, and extraSettings into a single merge.
     (mkIf (cfg.enable && hasManagedSettings) {
-      home.activation.claude-settings-config = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      home.activation.claude-settings-config = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         run mkdir -p "$(dirname "${claudeSettingsPath}")"
         run ${configMergeBinary}/bin/claude-config-merge \
           "${managedSettingsFile}" \
@@ -568,34 +664,28 @@ in {
     })
 
     # Keybindings → ~/.claude/keybindings.json
-    (mkIf (cfg.enable && keybindingsCfg.enable && keybindingsCfg.bindings != {}) {
+    (mkIf (cfg.enable && keybindingsCfg.enable && keybindingsCfg.bindings != { }) {
       home.file.".claude/keybindings.json".text = builtins.toJSON keybindingsJson;
     })
 
     # Subagents → ~/.claude/agents/{name}.md
-    (mkIf (cfg.enable && agentsCfg.enable && agentsCfg.definitions != {}) {
-      home.file = lib.mapAttrs' (name: path:
-        lib.nameValuePair ".claude/agents/${name}.md" {
-          source = path;
-        }
+    (mkIf (cfg.enable && agentsCfg.enable && agentsCfg.definitions != { }) {
+      home.file = lib.mapAttrs' (
+        name: path: lib.nameValuePair ".claude/agents/${name}.md" { source = path; }
       ) agentsCfg.definitions;
     })
 
     # Output styles → ~/.claude/output-styles/{name}.md
-    (mkIf (cfg.enable && outputStylesCfg.enable && outputStylesCfg.definitions != {}) {
-      home.file = lib.mapAttrs' (name: path:
-        lib.nameValuePair ".claude/output-styles/${name}.md" {
-          source = path;
-        }
+    (mkIf (cfg.enable && outputStylesCfg.enable && outputStylesCfg.definitions != { }) {
+      home.file = lib.mapAttrs' (
+        name: path: lib.nameValuePair ".claude/output-styles/${name}.md" { source = path; }
       ) outputStylesCfg.definitions;
     })
 
     # Rules → ~/.claude/rules/{name}.md
-    (mkIf (cfg.enable && rulesCfg.enable && rulesCfg.definitions != {}) {
-      home.file = lib.mapAttrs' (name: path:
-        lib.nameValuePair ".claude/rules/${name}.md" {
-          source = path;
-        }
+    (mkIf (cfg.enable && rulesCfg.enable && rulesCfg.definitions != { }) {
+      home.file = lib.mapAttrs' (
+        name: path: lib.nameValuePair ".claude/rules/${name}.md" { source = path; }
       ) rulesCfg.definitions;
     })
 
@@ -620,56 +710,77 @@ in {
         }
       ];
 
-      home.file.".claude/CLAUDE.md".source =
-        config.lib.file.mkOutOfStoreSymlink cfg.claudeMd.source;
+      home.file.".claude/CLAUDE.md".source = config.lib.file.mkOutOfStoreSymlink cfg.claudeMd.source;
     })
 
     # MCP packages → home.packages (installed to PATH)
-    (mkIf (cfg.enable && mcpPkgsCfg.enable) (let
-      # Helper: only include package if it exists in pkgs (many MCP servers not yet in nixpkgs)
-      optPkg = name: if builtins.hasAttr name pkgs then [pkgs.${name}] else [];
-      optPkgIf = cond: name: optionals cond (optPkg name);
-    in {
-      home.packages = with pkgs;
-        # NIX ECOSYSTEM
-        (optPkgIf (mcpPkgsCfg.nixos.enable && isLinux) "mcp-nixos")
-        ++ (optionals (mcpPkgsCfg.nixos.enable && isDarwin) [uv])
+    (mkIf (cfg.enable && mcpPkgsCfg.enable) (
+      let
+        # Helper: only include package if it exists in pkgs (many MCP servers not yet in nixpkgs)
+        optPkg = name: if builtins.hasAttr name pkgs then [ pkgs.${name} ] else [ ];
+        optPkgIf = cond: name: optionals cond (optPkg name);
+      in
+      {
+        home.packages =
+          with pkgs;
+          # NIX ECOSYSTEM
+          (optPkgIf (mcpPkgsCfg.nixos.enable && isLinux) "mcp-nixos")
+          ++ (optionals (mcpPkgsCfg.nixos.enable && isDarwin) [ uv ])
 
-        # VERSION CONTROL
-        ++ (optPkgIf mcpPkgsCfg.github.enable "github-mcp-server")
-        ++ (optPkgIf mcpPkgsCfg.gitea.enable "gitea-mcp-server")
+          # VERSION CONTROL
+          ++ (optPkgIf mcpPkgsCfg.github.enable "github-mcp-server")
+          ++ (optPkgIf mcpPkgsCfg.gitea.enable "gitea-mcp-server")
 
-        # CLOUD & INFRASTRUCTURE
-        ++ (optPkgIf mcpPkgsCfg.kubernetes.enable "mcp-k8s-go")
-        ++ (optPkgIf mcpPkgsCfg.aks.enable "aks-mcp-server")
-        ++ (optPkgIf mcpPkgsCfg.grafana.enable "mcp-grafana")
-        ++ (optPkgIf mcpPkgsCfg.terraform.enable "terraform-mcp-server")
-        ++ (optPkgIf mcpPkgsCfg.fluxcd.enable "fluxcd-operator-mcp")
+          # CLOUD & INFRASTRUCTURE
+          ++ (optPkgIf mcpPkgsCfg.kubernetes.enable "mcp-k8s-go")
+          ++ (optPkgIf mcpPkgsCfg.aks.enable "aks-mcp-server")
+          ++ (optPkgIf mcpPkgsCfg.grafana.enable "mcp-grafana")
+          ++ (optPkgIf mcpPkgsCfg.terraform.enable "terraform-mcp-server")
+          ++ (optPkgIf mcpPkgsCfg.fluxcd.enable "fluxcd-operator-mcp")
 
-        # BROWSER AUTOMATION
-        ++ (optPkgIf mcpPkgsCfg.playwright.enable "playwright-mcp")
+          # BROWSER AUTOMATION
+          ++ (optPkgIf mcpPkgsCfg.playwright.enable "playwright-mcp")
 
-        # DEVELOPMENT TOOLS
-        ++ (optPkgIf mcpPkgsCfg.languageServer.enable "mcp-language-server")
+          # DEVELOPMENT TOOLS
+          ++ (optPkgIf mcpPkgsCfg.languageServer.enable "mcp-language-server")
 
-        # MCP INFRASTRUCTURE & UTILITIES
-        ++ (optPkgIf mcpPkgsCfg.mcphost.enable "mcphost")
-        ++ (optPkgIf mcpPkgsCfg.toolhive.enable "toolhive")
-        ++ (optPkgIf (mcpPkgsCfg.proxy.enable && isLinux) "mcp-proxy")
-        ++ (optPkgIf (mcpPkgsCfg.chatmcp.enable && isLinux) "chatmcp")
+          # MCP INFRASTRUCTURE & UTILITIES
+          ++ (optPkgIf mcpPkgsCfg.mcphost.enable "mcphost")
+          ++ (optPkgIf mcpPkgsCfg.toolhive.enable "toolhive")
+          ++ (optPkgIf (mcpPkgsCfg.proxy.enable && isLinux) "mcp-proxy")
+          ++ (optPkgIf (mcpPkgsCfg.chatmcp.enable && isLinux) "chatmcp")
 
-        # PYTHON MCP ECOSYSTEM (Linux only)
-        ++ (optionals (mcpPkgsCfg.pythonSdk.enable && isLinux && builtins.hasAttr "mcp" python313Packages) [python313Packages.mcp])
-        ++ (optionals (mcpPkgsCfg.fastmcp.enable && isLinux && builtins.hasAttr "fastmcp" python313Packages) [python313Packages.fastmcp])
-        ++ (optionals (mcpPkgsCfg.mcpadapt.enable && isLinux && builtins.hasAttr "mcpadapt" python313Packages) [python313Packages.mcpadapt])
-        ++ (optionals (mcpPkgsCfg.docling.enable && isLinux && builtins.hasAttr "docling-mcp" python313Packages) [python313Packages.docling-mcp])
-        ++ (optionals (mcpPkgsCfg.fastapiMcp.enable && isLinux && builtins.hasAttr "fastapi-mcp" python313Packages) [python313Packages.fastapi-mcp])
-        ++ (optionals (mcpPkgsCfg.djangoMcp.enable && isLinux && builtins.hasAttr "django-mcp-server" python313Packages) [python313Packages.django-mcp-server])
+          # PYTHON MCP ECOSYSTEM (Linux only)
+          ++ (optionals (mcpPkgsCfg.pythonSdk.enable && isLinux && builtins.hasAttr "mcp" python313Packages) [
+            python313Packages.mcp
+          ])
+          ++ (optionals (
+            mcpPkgsCfg.fastmcp.enable && isLinux && builtins.hasAttr "fastmcp" python313Packages
+          ) [ python313Packages.fastmcp ])
+          ++ (optionals (
+            mcpPkgsCfg.mcpadapt.enable && isLinux && builtins.hasAttr "mcpadapt" python313Packages
+          ) [ python313Packages.mcpadapt ])
+          ++ (optionals (
+            mcpPkgsCfg.docling.enable && isLinux && builtins.hasAttr "docling-mcp" python313Packages
+          ) [ python313Packages.docling-mcp ])
+          ++ (optionals (
+            mcpPkgsCfg.fastapiMcp.enable && isLinux && builtins.hasAttr "fastapi-mcp" python313Packages
+          ) [ python313Packages.fastapi-mcp ])
+          ++ (optionals (
+            mcpPkgsCfg.djangoMcp.enable && isLinux && builtins.hasAttr "django-mcp-server" python313Packages
+          ) [ python313Packages.django-mcp-server ])
 
-        # HASKELL MCP ECOSYSTEM
-        ++ (optionals (mcpPkgsCfg.haskellMcp.enable && builtins.hasAttr "mcp" haskellPackages) [haskellPackages.mcp])
-        ++ (optionals (mcpPkgsCfg.haskellMcpServer.enable && builtins.hasAttr "mcp-server" haskellPackages) [haskellPackages.mcp-server])
-        ++ (optionals (mcpPkgsCfg.ptyMcpServer.enable && builtins.hasAttr "pty-mcp-server" haskellPackages) [haskellPackages.pty-mcp-server]);
-    }))
+          # HASKELL MCP ECOSYSTEM
+          ++ (optionals (mcpPkgsCfg.haskellMcp.enable && builtins.hasAttr "mcp" haskellPackages) [
+            haskellPackages.mcp
+          ])
+          ++ (optionals (
+            mcpPkgsCfg.haskellMcpServer.enable && builtins.hasAttr "mcp-server" haskellPackages
+          ) [ haskellPackages.mcp-server ])
+          ++ (optionals (
+            mcpPkgsCfg.ptyMcpServer.enable && builtins.hasAttr "pty-mcp-server" haskellPackages
+          ) [ haskellPackages.pty-mcp-server ]);
+      }
+    ))
   ];
 }
