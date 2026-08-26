@@ -246,17 +246,17 @@
     },
     "claude-code": {
       "inputs": {
-        "flake-utils": "flake-utils",
         "nixpkgs": [
           "nixpkgs"
-        ]
+        ],
+        "systems": "systems"
       },
       "locked": {
-        "lastModified": 1786159714,
-        "narHash": "sha256-Rm3yXcjHmoebdRA35SVy/AM9PsckDPPJkY+xGodiIHQ=",
+        "lastModified": 1787699103,
+        "narHash": "sha256-3ECBnHUvNzS1Kav9H1VFD1bNinvA12Y722xQ4MZreG8=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "9bf9ac959eaee3b06d6ef13f18a711ae64a581b4",
+        "rev": "566ec1c4dd011a7b32ac5aef69568e209402bf2d",
         "type": "github"
       },
       "original": {
@@ -1025,7 +1025,7 @@
     },
     "flake-utils": {
       "inputs": {
-        "systems": "systems"
+        "systems": "systems_3"
       },
       "locked": {
         "lastModified": 1731533236,
@@ -1043,24 +1043,6 @@
     },
     "flake-utils_2": {
       "inputs": {
-        "systems": "systems_3"
-      },
-      "locked": {
-        "lastModified": 1731533236,
-        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "type": "github"
-      }
-    },
-    "flake-utils_3": {
-      "inputs": {
         "systems": "systems_4"
       },
       "locked": {
@@ -1077,7 +1059,7 @@
         "type": "github"
       }
     },
-    "flake-utils_4": {
+    "flake-utils_3": {
       "inputs": {
         "systems": "systems_6"
       },
@@ -1685,11 +1667,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1785735640,
-        "narHash": "sha256-GQ7R7FeqOPEw7bFFIAa5vUniVIw2Cosq6Ua5cjhYMIo=",
+        "lastModified": 1787164959,
+        "narHash": "sha256-/IOdQqPBxcjAgMO9PTOCo5AtT7yVJtFK0ovUF8Xz3WI=",
         "owner": "pleme-io",
         "repo": "guardrail",
-        "rev": "1e1d8d6eea1a1dbc066273405dc8a18a7c00f676",
+        "rev": "45040fddd038c0e7ae22f7f3959385d3eb7eb243",
         "type": "github"
       },
       "original": {
@@ -2481,11 +2463,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1786025670,
-        "narHash": "sha256-CEPIK+r2lXuHhiKKF5OQHkcKhnZXdhbTy0ZrZ9zPCmk=",
+        "lastModified": 1786959077,
+        "narHash": "sha256-+V0N5riIFwgVNmLyKd1K7i2vDQ668tNetJQ3AgjLJd0=",
         "owner": "pleme-io",
         "repo": "skill-lint",
-        "rev": "b2946c54a3c3706200ed8278c91962269969c2b9",
+        "rev": "8f8db998dc07eecd1077a213f77897573898aa97",
         "type": "github"
       },
       "original": {
@@ -2520,7 +2502,7 @@
         "devenv": "devenv",
         "fenix": "fenix",
         "flake-parts": "flake-parts_4",
-        "flake-utils": "flake-utils_2",
+        "flake-utils": "flake-utils",
         "home-manager": "home-manager_2",
         "nix-darwin": "nix-darwin",
         "nixpkgs": "nixpkgs_6",
@@ -2528,11 +2510,11 @@
         "tatara-lisp": "tatara-lisp"
       },
       "locked": {
-        "lastModified": 1786349852,
-        "narHash": "sha256-Zq+QBJKk/bHA9OL/GjJyvEwyKK8Js2o+/v4lMLqxQvI=",
+        "lastModified": 1787489531,
+        "narHash": "sha256-Opy9KMF4Q+W6RHtzBY8VigKUkYkdU3PNn4T7r1LIopE=",
         "owner": "pleme-io",
         "repo": "substrate",
-        "rev": "8baaf33049f3c178ea0419941b866eba77224604",
+        "rev": "128a8dd342bd426b6ac8b2877f1b236e1bdf36a5",
         "type": "github"
       },
       "original": {
@@ -2547,7 +2529,7 @@
         "devenv": "devenv_2",
         "fenix": "fenix_2",
         "flake-parts": "flake-parts_9",
-        "flake-utils": "flake-utils_4",
+        "flake-utils": "flake-utils_3",
         "nixpkgs": [
           "substrate",
           "tatara-lisp",
@@ -2663,7 +2645,7 @@
     "tatara-lisp": {
       "inputs": {
         "crate2nix": "crate2nix_3",
-        "flake-utils": "flake-utils_3",
+        "flake-utils": "flake-utils_2",
         "nixpkgs": [
           "substrate",
           "nixpkgs"
