@@ -21,13 +21,32 @@
       url = "github:pleme-io/skill-lint";
       inputs.substrate.follows = "substrate";
     };
+    # ── ★ noroshi's INPUT IS DEFERRED, ITS OPTION SURFACE IS NOT ─────────
     # noroshi is guardrail's mirror image on the other axis (what the
-    # operator must be TOLD). Same substrate.rust.tool shape, so the same
-    # dedupe hook applies.
-    noroshi = {
-      url = "github:pleme-io/noroshi";
-      inputs.substrate.follows = "substrate";
-    };
+    # operator must be TOLD), and it will carry the same substrate.rust.tool
+    # shape and the same dedupe hook.
+    #
+    # The input is commented out because `pleme-io/noroshi` DOES NOT EXIST
+    # YET — the working tree is local-only, with no remote. Declaring it
+    # made every consumer's eval fail on
+    #   unable to download '…/repos/pleme-io/noroshi/tarball/…': HTTP 401
+    # which fleet-wide meant no node could build at all.
+    #
+    # Deferring the INPUT rather than the FEATURE is the point. The typed
+    # option surface in module/claude-options.nix is pure — it declares
+    # `blackmatter.components.claude.noroshi` and touches no package — so a
+    # consumer can set it today and the whole fleet evaluates. The only
+    # package reference sits behind `mkIf (cfg.enable && noroshiCfg.enable)`
+    # in module/default.nix, which is lazily unevaluated while the feature
+    # is off, and is guarded by an assertion naming this line when it is on.
+    #
+    # Restore both this input and the overlay entry below the moment the
+    # repo is created through the pangea-operator org catalog (declared in
+    # pangea-architectures' org.yaml as of 9531bce, awaiting reconcile).
+    # noroshi = {
+    #   url = "github:pleme-io/noroshi";
+    #   inputs.substrate.follows = "substrate";
+    # };
   };
 
   outputs =
@@ -38,7 +57,7 @@
       claude-code,
       guardrail,
       skill-lint,
-      noroshi,
+      # `noroshi,` returns here with its input above.
       ...
     }:
     (import "${substrate}/lib/blackmatter-component-flake.nix") {
@@ -49,7 +68,10 @@
       overlay = final: prev: {
         guardrail = guardrail.packages.${prev.stdenv.hostPlatform.system}.default;
         guardrail-rules = guardrail + "/rules";
-        noroshi = noroshi.packages.${prev.stdenv.hostPlatform.system}.default;
+        # Returns with the input above. Its absence is what the module's
+        # assertion names, so enabling noroshi today fails with a sentence
+        # instead of `attribute 'noroshi' missing`.
+        # noroshi = noroshi.packages.${prev.stdenv.hostPlatform.system}.default;
       };
       # `claude-config-merge.rs` / `statusline.rs` are zero-dependency
       # binaries compiled directly with `rustc` (no Cargo.toml — see the

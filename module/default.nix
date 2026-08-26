@@ -625,6 +625,30 @@ in
     # type-owned-by-binary seam, opposite axis (what the operator must be
     # TOLD, not what the agent must not DO).
     (mkIf (cfg.enable && noroshiCfg.enable) {
+      # ★ The package is DEFERRED, the option surface is not — see the
+      # commented-out `noroshi` input in this repo's flake.nix. Enabling
+      # the feature before `pleme-io/noroshi` exists would otherwise fail
+      # deep in the hook list with `attribute 'noroshi' missing`, naming
+      # neither the cause nor the fix. This says both.
+      assertions = [
+        {
+          assertion = pkgs ? noroshi;
+          message = ''
+            blackmatter.components.claude.noroshi.enable = true, but the
+            `noroshi` package is not in pkgs.
+
+            The flake input is deliberately deferred: `pleme-io/noroshi`
+            does not exist yet (declared in pangea-architectures' org.yaml
+            at 9531bce, awaiting the operator's reconcile). Declaring the
+            input before the repo exists made every consumer's eval fail
+            with a 401, fleet-wide.
+
+            Either leave this off until the repo is created and the input
+            is restored, or restore both the input and the overlay entry
+            in blackmatter-claude/flake.nix if it now exists.
+          '';
+        }
+      ];
       home.file.".config/noroshi/noroshi.yaml".text = builtins.toJSON (
         {
           mention = noroshiCfg.mention;
