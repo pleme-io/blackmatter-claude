@@ -59,7 +59,7 @@ Kubernetes (and Nomad, and PureRaft) distribution. One design, three axes:
 > a rebuild, so a running daemon can be several releases behind the repo — check
 > before drawing conclusions from live behaviour. This is the recurring trap.
 >
-> **Read [`docs/WHY-ENGENHO.md`](../../engenho/docs/WHY-ENGENHO.md) before any
+> **Read [`docs/WHY-ENGENHO.md`](https://github.com/pleme-io/engenho/blob/main/docs/WHY-ENGENHO.md) before any
 > strategic conversation about engenho.** It carries the researched case for
 > what engenho is FOR — orchestrators are not architecturally special, the moat
 > is accumulated convention, and the payoff is testing / simulation / embedding
@@ -263,7 +263,7 @@ the `engenho-ipam` plugin).
 - **"Where is the <X> state machine?"** → `engenho/docs/STATE-MACHINES.md` index →
   the named source file; formalized FSMs in `engenho-machines`.
 - **"Why engenho / is this worth it / what is it for?"** → read
-  [`docs/WHY-ENGENHO.md`](../../engenho/docs/WHY-ENGENHO.md). Short version:
+  [`docs/WHY-ENGENHO.md`](https://github.com/pleme-io/engenho/blob/main/docs/WHY-ENGENHO.md). Short version:
   Kubernetes and Nomad are the same shape in different packaging (server/client
   + Raft + reconciliation), engenho is Nomad's packaging speaking Kubernetes'
   contract, and the payoff is **testing / simulation / embedding** — because
