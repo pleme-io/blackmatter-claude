@@ -4,7 +4,7 @@ description: Operate and navigate engenho — pleme-io's typed, attested, Rust-n
 allowed-tools: Bash, Read, Glob, Grep, mcp__engenho__cluster_status, mcp__engenho__cluster_config, mcp__engenho__cluster_kubeconfig, mcp__engenho__cluster_snapshot_meta, mcp__engenho__cluster_pods, mcp__engenho__cluster_resource_list, mcp__engenho__cluster_resource_get
 metadata:
   version: "0.1.0"
-  last_verified: "2026-05-26"
+  last_verified: "2026-08-30"
   domain_keywords:
     - "engenho"
     - "kikai"
@@ -18,6 +18,11 @@ metadata:
     - "typescape"
     - "k3s"
     - "cluster"
+    - "csi"
+    - "cni"
+    - "etcd"
+    - "simulation"
+    - "differential"
 ---
 
 # engenho — distributed Kubernetes runtime operator playbook
@@ -35,9 +40,30 @@ Kubernetes (and Nomad, and PureRaft) distribution. One design, three axes:
   wasm / static binary / helm chart), and distributes it after a K-of-N
   independent-rebuild quorum.
 
-> **Status reality (important):** the `engenho` *binary* is an M0.0 placeholder.
-> The **real cluster today is k3s, managed by `kikai`** (the wire-compat bridge),
-> until engenho-native lands at M0.4. The engenho MCP reads kikai's on-disk state.
+> **★ STATUS, RE-MEASURED 2026-08-30 — the previous note here was FALSE and had
+> been for months.** It read: *"the `engenho` binary is an M0.0 placeholder; the
+> real cluster today is k3s, managed by kikai."* Both halves are wrong now.
+>
+> engenho runs the local cluster **natively, on macOS baremetal** — no VM, no
+> k3s, no kikai in the path. Measured today: a launchd daemon
+> (`io.pleme.engenho.daemon`) serving `:6443` (`readyz` 200, reports `v1.34.0`,
+> `compiler: rustc`) and `:10250`, enforcing RBAC, across **18 API groups plus
+> core v1**. 27 crates, ~185k lines, **3,512 tests**.
+>
+> **kikai is a k3s VM orchestrator and is NOT engenho.** Pointing kikai's lens
+> at engenho reports a healthy cluster as down. Use `banken` or `kubectl` with
+> the right context — and note the context is named from inside the kubeconfig
+> (`engenho-cid-<hash>`), not from a path.
+>
+> **The live binary routinely lags HEAD.** It is a nix store path installed by
+> a rebuild, so a running daemon can be several releases behind the repo — check
+> before drawing conclusions from live behaviour. This is the recurring trap.
+>
+> **Read [`docs/WHY-ENGENHO.md`](../../engenho/docs/WHY-ENGENHO.md) before any
+> strategic conversation about engenho.** It carries the researched case for
+> what engenho is FOR — orchestrators are not architecturally special, the moat
+> is accumulated convention, and the payoff is testing / simulation / embedding
+> — with each claim measured or sourced.
 
 ## Repos
 
@@ -103,6 +129,87 @@ Lifecycle FSM (the never-stuck spine): `Uninitialized → Initialized → DisksR
 Destroyed` and the terminal `BlockedDeclarative` (broken declaration — needs
 operator action, not retry).
 
+## ★ The contract ring — and the ONE rule for touching it
+
+engenho's value is not its API; it is the ring of contracts AROUND the API
+that lets existing software drive it. Each is independently composable — a
+deployment can serve `:2379` and not `:10250`.
+
+| contract | port / seam | state (2026-08-30) |
+|---|---|---|
+| **etcd v3** | `:2379`, `runtime.etcd_listen_addr` | read-only (`Range`/`Watch`/`Maintenance`); real `etcdctl` works |
+| **kubelet API** | `:10250`, `runtime.kubelet_listen_addr` | logs / pods / exec over `v5.channel.k8s.io` |
+| **CSI** | `<data_dir>/plugins_registry` | registration, node publish, dynamic provisioning — all wired |
+| **CNI** | `/etc/cni/net.d` | config + planning + exec + node status. **Pod-attach NOT wired** (`pending-cni: pod-attach`, needs Linux) |
+
+engenho also SHIPS its own implementations of both plugin contracts —
+`engenho-ipam` (a real CNI IPAM plugin) and `engenho-csi-localpath` (a real
+CSI driver). Naturalized, not vendored.
+
+> ### ★★ THE RULE: a contract is not implemented until a foreign oracle says so.
+>
+> Our own reference driver and reference plugin are real processes on real
+> sockets and they still **cannot falsify us** — same author, same reading of
+> the same spec, so they prove our encoder agrees with our decoder. The
+> differentials are what prove the contract. Measured on first contact:
+>
+> | oracle | verdict |
+> |---|---|
+> | real `etcdctl` | **found a bug** — `db_size: 0` → integer divide by zero in `endpoint status` |
+> | `csi-driver-host-path` v1.15.0 | 3/3 clean |
+> | `containernetworking/plugins` 1.8.0 | **found a bug** — missing `IgnoreUnknown=true` meant engenho could drive NO upstream plugin |
+>
+> Two of three. You cannot know which until you run it. Say "the contract is
+> implemented", never "proven", until one has.
+>
+> ```bash
+> # CSI (works on darwin)
+> ENGENHO_CSI_ORACLE=/tmp/csi-state/csi.sock \
+>   cargo test -p engenho-csi --test m2_3_foreign_driver_differential -- --ignored
+> # CNI (needs Linux; cni-plugins does not build on darwin at all)
+> ssh rio '… ENGENHO_CNI_PLUGIN_DIR=<store>/bin cargo test -p engenho-cni \
+>   --test m3_1_foreign_plugin_differential -- --ignored'
+> ```
+
+## ★ "type + backend + no producer" — the recurring defect class
+
+**Nine instances found in this codebase.** A trait, its backends and its tests
+all exist; nothing constructs it. Every symbol resolves, every test passes, and
+the capability is absent. `grep` cannot find it.
+
+Detection: `grep -rn '<Trait>' --include=*.rs . | grep -v '<defining file>' |
+grep -v '/tests/'` → zero non-test hits.
+
+The worst instances were not missing features. `NetworkPolicyEnforcer` (#8)
+meant a default-deny policy applied cleanly and restricted nothing.
+`engenho-etcd` (#9) was a complete façade with 48 passing tests that nothing
+could dial — and its whole purpose was to be an oracle.
+
+**Rule: any new vocabulary ships its producer in the SAME commit.**
+
+And a near-miss trait naming your use case in its own header is not evidence it
+fits. `VolumeRuntime`'s header named `CsiVolumeBackend (R13b — gRPC to CSI
+plugins)` as future work; measured, its INPUTS are provisioning-shaped and its
+OUTPUT is mounting-shaped, while CSI splits those across two services on two
+machines. Compare input shape AND output shape — one matching half is a trap.
+It is now marked superseded, declaration retained (★★ MODULARIZE, DON'T DELETE).
+
+## ★ Platform gaps are TYPED, never faked
+
+darwin cannot host a network namespace or a Linux mount. Those are facts about
+the world, so they get types rather than stubs — and nothing else in the
+cluster distinguishes a computed result from a real one, because the pod gets
+an address either way and `kubectl` shows it either way.
+
+| type | meaning |
+|---|---|
+| `DatapathInstall::{Computed,Installed}` | kube-proxy rules computed vs. installed in a kernel |
+| `PolicyDatapath::{Computed,Installed}` | NetworkPolicy tracked vs. actually filtering |
+| `CniInstall::{Planned,Invoked}` | chain planned vs. plugins executed (published as `engenho.io/cni-install`) |
+
+When adding a capability that cannot work on the host, copy this shape. A stub
+that returns success is the failure mode these exist to prevent.
+
 ## Navigating the codebase (where things live)
 
 | Concern | Crate(s) |
@@ -120,8 +227,13 @@ operator action, not retry).
 | **formalized state machines + typescape regs** | `engenho-machines` (`MaterializationMachine`, `TopologyNodeMachine`) |
 | MCP reader/writer | `engenho-mcp` |
 
-Fast code search: `mcp__zoekt__search` (repo is indexed as
-`github.com/pleme-io/engenho`), or `cargo test -p <crate>` to verify a change.
+Fast code search: `mcp__codesearch__search_exact` / `semantic_search` (zoekt is
+RETIRED since 2026-08-12), or `cargo test -p <crate>` to verify a change.
+
+Newer crates not in the table above: `engenho-etcd` (etcd v3 façade + the
+`/registry` keyspace), `engenho-csi` (CSI client, registration, the
+`localpath` driver), `engenho-cni` (net.d config, chain exec, IPAM +
+the `engenho-ipam` plugin).
 
 ## The non-negotiable rules (don't violate)
 
@@ -132,7 +244,14 @@ Fast code search: `mcp__zoekt__search` (repo is indexed as
    `ResourceCommand`/`StoreMesh`.
 4. **Attest every transition** — role shifts + materializations write
    BLAKE3+ed25519 chain blocks; trust = K-of-N independent rebuilds (`QuorumOutcome`).
-5. **Tatara/shigoto/shikumi, not bespoke** — daemon supervision, work graphs, and
+5. **Ship the producer with the vocabulary** — see the defect class above. A
+   trait with backends and no caller is the most common way a capability is
+   absent while every test is green.
+6. **A detached task must NOT hold `Arc<StoreMesh>`** — it keeps the Raft log
+   and fjall handles alive for the process lifetime, so shutdown can never
+   reclaim the store. Hit twice (the :10250 and :2379 listeners); both now hold
+   a `Weak` and there is a regression test.
+7. **Tatara/shigoto/shikumi, not bespoke** — daemon supervision, work graphs, and
    config go through the substrate primitives; shell beyond 3-line glue → tatara-script.
 
 ## Common tasks
@@ -143,6 +262,15 @@ Fast code search: `mcp__zoekt__search` (repo is indexed as
   user run via `! kikai …` for interactive auth).
 - **"Where is the <X> state machine?"** → `engenho/docs/STATE-MACHINES.md` index →
   the named source file; formalized FSMs in `engenho-machines`.
+- **"Why engenho / is this worth it / what is it for?"** → read
+  [`docs/WHY-ENGENHO.md`](../../engenho/docs/WHY-ENGENHO.md). Short version:
+  Kubernetes and Nomad are the same shape in different packaging (server/client
+  + Raft + reconciliation), engenho is Nomad's packaging speaking Kubernetes'
+  contract, and the payoff is **testing / simulation / embedding** — because
+  Raft determinism and deterministic-simulation determinism are the SAME
+  requirement, and engenho already paid for it (`mint_uid` is BLAKE3-derived,
+  `relogio` is a typed clock seam, every side effect is behind an Environment
+  trait). The named next step is auditing away stray `SystemTime::now()` calls.
 - **"Add a new typed primitive to the typescape"** → impl `Typescape` (round-trip
   law) per `engenho/docs/TYPESCAPE.md`; substrate types use the local-newtype
   pattern (`engenho-machines/src/shape_ts.rs`) to dodge the orphan rule.
