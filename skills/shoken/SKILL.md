@@ -43,16 +43,27 @@ CLAUDE.md warns about for coverage claims, applied to the front door.
 
 ## The five checks
 
-Run all five. Each is a shell command, not a judgment call.
+Each check is a **typed operation over an injected Environment**, not a
+shell pipeline and not a judgment call. The Environment carries exactly
+four capabilities — run a process, read a file, list files, fetch a URL —
+so every check is testable against a mock with no filesystem, no network
+and no subprocess.
+
+**NO SHELL applies here more than anywhere**, because this skill exists to
+police discipline and an earlier draft of it specified all five checks as
+shell one-liners, including a `curl | python3` pipe. That draft would have
+taught the violation it was written to catch. What each check MEASURES is
+below; `(defshoken ...)` is what runs it.
 
 ### 1. The binary answers the two commands everyone types first
 
-```bash
-<binary> --help; echo "exit=$?"
-<binary> --version; echo "exit=$?"
-```
+**Measured:** the binary is invoked with `--help`, then `--version`, via a
+typed `Command` built from typed pieces — never a shell string. Both must
+exit 0 and write usage text to stdout.
 
-Both must exit 0 and print usage. **A stack trace here is the entire
+A non-zero exit, an empty stdout, or a stderr carrying a panic or backtrace
+marker is a FAIL. A binary that cannot be invoked at all is
+**`CouldNotMeasure`, never a pass** — see the verdict rule below. **A stack trace here is the entire
 first impression.** Measured 2026-08-30: `engenho --version` printed an
 `anyhow` error plus a backtrace, on a binary serving 18 API groups with
 3,556 passing tests.
@@ -65,10 +76,10 @@ to the unknown-verb arm unless you handle it. Accept all six spellings —
 
 ### 2. The status line matches the test count
 
-```bash
-grep -in "status\|pre-implementation\|draft\|not yet\|WIP" README.md | head
-cargo test --workspace 2>&1 | tail -3
-```
+**Measured:** the README's first screen is read and scanned for
+not-yet-started markers (`pre-implementation`, `draft`, `WIP`, `not yet`);
+the test count comes from the suite's own summary line. Both are values the
+Environment supplies, so the comparison is a pure function over them.
 
 If the README says *"pre-implementation"* and the suite is green with
 four digits, the README is the defect. Two repos carried that exact line
@@ -82,12 +93,9 @@ login manager."* Nobody reading that feels misled in either direction.
 
 ### 3. The install command installs YOUR project
 
-```bash
-curl -s "https://crates.io/api/v1/crates/<name>" | \
-  python3 -c "import json,sys;c=json.load(sys.stdin)['crate'];print(c['name'],c['newest_version'],c['repository'])"
-```
-
-Check the `repository` field points at your repo. **A name you do not own
+**Measured:** the registry is queried for the name the README tells people
+to install, and the returned `repository` field is compared against this
+repo's own remote. The comparison is the check — not the fetch. **A name you do not own
 resolves to someone else's crate and the command still succeeds** — which
 is worse than an error, because the user believes they installed you.
 
@@ -103,11 +111,9 @@ only the top-level one collided, so **check each row, not the pattern.**
 
 ### 4. Every number has a harness you can run
 
-```bash
-grep -nE "[0-9]+(\.[0-9]+)?(×|x) (faster|CppNix|than)|[0-9]+/[0-9]+ bench" README.md
-```
-
-For each hit, name the file that produces it and run it. A number with no
+**Measured:** the README is scanned for numeric performance claims, and
+each one must name a harness path that EXISTS. A claim whose harness cannot
+be located is a ghost. A number with no
 harness is a **ghost**: prose that reads as evidence and is not.
 
 Measured 2026-08-30: sui's README claimed *"Exceeds CppNix 3× on 45/48
@@ -124,10 +130,11 @@ An outsider who finds it stops trusting every other number you publish.
 
 If the repo publishes a status ledger, audit the SHIPPED rows:
 
-```bash
-# for a module claimed SHIPPED, find its non-test callers
-grep -rn "<module>" --include=*.rs src/ | grep -v "^.*<module>.rs:" | grep -v test
-```
+**Measured:** for each row claiming SHIPPED, the module it names is
+resolved and its **non-test callers are enumerated** — an actual reference
+lookup, not a text scan, because a text scan counts a module's own
+definition and its test fixtures as callers and thereby confirms whatever
+it was asked to confirm.
 
 **Zero callers means ABSENT, however complete the implementation.**
 
@@ -142,6 +149,23 @@ discipline: state the rung you are on, never the one above.
 Ledgers rot in **both** directions — the same audit found `CNI / CSI:
 ABSENT` on a repo that had since grown both crates. Re-measure the whole
 table and re-date it; do not spot-fix one row.
+
+## The verdict rule
+
+Every check returns one of **four** values, and the fourth is the point:
+
+| verdict | meaning |
+|---|---|
+| `Pass` | measured, and it holds |
+| `Fail` | measured, and it does not hold |
+| `NotApplicable` | the subject has no such surface — a library has no `--help` |
+| `CouldNotMeasure` | the probe itself failed — binary missing, registry unreachable, file absent |
+
+**`CouldNotMeasure` may never round to `Pass`.** A checker that reports
+"could not run the binary" as green is committing the exact defect it
+exists to catch, and it fails in the direction nobody investigates. This
+is the same tier discipline the fleet applies elsewhere: state the rung you
+are on, never the one above.
 
 ## When to run it
 
