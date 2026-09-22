@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 {
-        eprintln!("usage: claude-config-merge <managed-config.json> [--config <path>]");
+        eprintln!("usage: claude-config-merge <managed-config.json> [--config <path>] [--exclusive-mcp]");
         std::process::exit(1);
     }
 
@@ -68,7 +68,15 @@ fn main() {
     // Remove MCP servers not in the managed config (prevents stale entries
     // from old nix generations persisting after the module that created them
     // is removed). Also removes entries with missing binaries (GC'd paths).
-    let cleaned = clean_stale_mcp_servers(&merged, &managed);
+    // --exclusive-mcp: the managed `mcpServers` is the WHOLE set. Needed where
+    // the consumer (Claude Desktop) keeps servers whose command is neither a
+    // store path nor missing, which the stale-pruning below would keep.
+    let exclusive = args.iter().any(|a| a == "--exclusive-mcp");
+    let cleaned = if exclusive {
+        with_exclusive_mcp(&merged, &managed)
+    } else {
+        clean_stale_mcp_servers(&merged, &managed)
+    };
 
     // Report and validate
     let valid = report_mcp_status(&cleaned);
@@ -200,6 +208,19 @@ fn clean_stale_mcp_servers(config: &JsonValue, managed: &JsonValue) -> JsonValue
         root.insert("mcpServers".to_string(), JsonValue::Object(servers));
     }
 
+    JsonValue::Object(root)
+}
+
+fn with_exclusive_mcp(config: &JsonValue, managed: &JsonValue) -> JsonValue {
+    let JsonValue::Object(mut root) = config.clone() else {
+        return config.clone();
+    };
+    let servers = match managed {
+        JsonValue::Object(m) => m.get("mcpServers").cloned(),
+        _ => None,
+    }
+    .unwrap_or_else(|| JsonValue::Object(BTreeMap::new()));
+    root.insert("mcpServers".to_string(), servers);
     JsonValue::Object(root)
 }
 
@@ -492,6 +513,19 @@ fn push_indent(out: &mut String, level: usize) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn exclusive_mcp_replaces_the_server_set_and_keeps_other_keys() {
+        let existing = parse_json(
+            r#"{"mcpServers":{"a":{"command":"/bin/sh"},"b":{"command":"ws://x"}},"preferences":{"k":true}}"#,
+        )
+        .unwrap();
+        let managed = parse_json(r#"{"mcpServers":{}}"#).unwrap();
+        let out = with_exclusive_mcp(&deep_merge(&existing, &managed), &managed);
+        let JsonValue::Object(root) = out else { panic!() };
+        assert!(matches!(root.get("mcpServers"), Some(JsonValue::Object(m)) if m.is_empty()));
+        assert!(root.contains_key("preferences"));
+    }
+
     use super::*;
     use std::ffi::OsString;
     use std::fs;

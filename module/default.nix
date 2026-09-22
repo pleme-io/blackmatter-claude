@@ -418,6 +418,31 @@ in
       '';
     };
 
+    # Claude Desktop (the macOS app) — a separate MCP plane from Claude Code.
+    # The app rewrites its own preferences into the same file, so it is
+    # deep-merged rather than symlinked; `mcpServers` is exclusive: the
+    # declared set is the whole set, and anything added in the app's UI is
+    # removed on the next activation.
+    desktop = {
+      enable = mkEnableOption "declarative Claude Desktop config (macOS)";
+      configPath = mkOption {
+        type = types.str;
+        default = "${config.home.homeDirectory}/Library/Application Support/Claude/claude_desktop_config.json";
+        defaultText = literalExpression ''"''${config.home.homeDirectory}/Library/Application Support/Claude/claude_desktop_config.json"'';
+        description = "Claude Desktop config file.";
+      };
+      mcpServers = mkOption {
+        type = types.attrsOf types.attrs;
+        default = { };
+        description = "Claude Desktop MCP servers. Exclusive — `{ }` means none.";
+      };
+      preferences = mkOption {
+        type = types.attrs;
+        default = { };
+        description = "Keys deep-merged into the app's `preferences` object; unset keys stay the app's.";
+      };
+    };
+
     # All typed options imported from claude-options.nix
     # Covers: settings, permissions, attribution, sandbox, hooks (typed submodules),
     # keybindings, agents, outputStyles, rules, lsp, mcp, skills, theme, mcpPackages
@@ -427,6 +452,23 @@ in
   # ── Config ───────────────────────────────────────────────────────────
 
   config = mkMerge [
+    (mkIf (cfg.desktop.enable && isDarwin) {
+      home.activation.claude-desktop-config =
+        let
+          managed = pkgs.writeText "claude-desktop-managed.json" (
+            builtins.toJSON (
+              { inherit (cfg.desktop) mcpServers; }
+              // optionalAttrs (cfg.desktop.preferences != { }) { inherit (cfg.desktop) preferences; }
+            )
+          );
+        in
+        lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          run mkdir -p "$(dirname "${cfg.desktop.configPath}")"
+          run ${configMergeBinary}/bin/claude-config-merge "${managed}" \
+            --config "${cfg.desktop.configPath}" --exclusive-mcp
+        '';
+    })
+
     # Claude Code package installation
     (mkIf cfg.enable { home.packages = [ cfg.package ]; })
 
