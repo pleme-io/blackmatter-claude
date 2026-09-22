@@ -1,10 +1,10 @@
 ---
 name: engenho
-description: Operate and navigate engenho — pleme-io's typed, attested, Rust-native distributed Kubernetes runtime (Pillar 7). Use when reading live engenho/kikai cluster state via the engenho MCP, running the kikai cluster lifecycle (init/up/down/snapshot/destroy), locating a subsystem/state-machine/type across the 20-crate workspace, or reasoning about the distributed (revoada/teia/store), API-compatible (faces), and derivation-substrate layers. Pairs with the engenho-mcp tool catalog.
-allowed-tools: Bash, Read, Glob, Grep, mcp__engenho__cluster_status, mcp__engenho__cluster_config, mcp__engenho__cluster_kubeconfig, mcp__engenho__cluster_snapshot_meta, mcp__engenho__cluster_pods, mcp__engenho__cluster_resource_list, mcp__engenho__cluster_resource_get
+description: Operate and navigate engenho — pleme-io's typed, attested, Rust-native distributed Kubernetes runtime (Pillar 7). Use when managing a running engenho daemon through its control plane (`engenho ctl` locally or `--remote`, or the engenho MCP's control_* tools) — lifecycle, boot journal, init/PKI state, runtime config overrides, children, gated re-initialization — when reading live engenho/kikai cluster state via the engenho MCP, running the kikai cluster lifecycle, locating a subsystem/state-machine/type across the workspace, or reasoning about the distributed (revoada/teia/store), API-compatible (faces), and derivation-substrate layers.
+allowed-tools: Bash, Read, Glob, Grep, mcp__engenho__cluster_status, mcp__engenho__cluster_config, mcp__engenho__cluster_kubeconfig, mcp__engenho__cluster_snapshot_meta, mcp__engenho__cluster_pods, mcp__engenho__cluster_resource_list, mcp__engenho__cluster_resource_get, mcp__engenho__control_hello_show, mcp__engenho__control_runtime_show, mcp__engenho__control_boot_show, mcp__engenho__control_boot_attempts, mcp__engenho__control_init_show, mcp__engenho__control_config_show, mcp__engenho__control_config_leaves, mcp__engenho__control_config_get, mcp__engenho__control_config_overrides, mcp__engenho__control_config_drift, mcp__engenho__control_children_list, mcp__engenho__control_children_get, mcp__engenho__control_pki_show, mcp__engenho__control_store_show, mcp__engenho__control_kubeconfigs_list, mcp__engenho__control_events_list, mcp__engenho__control_logs_list, mcp__engenho__control_audit_list, mcp__engenho__control_control_show
 metadata:
-  version: "0.1.0"
-  last_verified: "2026-08-30"
+  version: "0.2.0"
+  last_verified: "2026-09-22"
   domain_keywords:
     - "engenho"
     - "kikai"
@@ -77,16 +77,51 @@ Kubernetes (and Nomad, and PureRaft) distribution. One design, three axes:
 ## Authoritative docs (read these first)
 
 - `engenho/docs/STRATEGY.md` — invariants + action taxonomy + phase spine
-- `engenho/docs/STATE-MACHINES.md` — the 12-machine catalog (states/events/transitions/source)
+- `engenho/docs/CONTROL-PLANE.md` — managing a running daemon: lifecycle, socket + remote trust, overrides, children, re-initialization, MCP
+- `engenho/docs/STATE-MACHINES.md` — the 13-machine catalog (states/events/transitions/source); ⑬ is the daemon lifecycle
 - `engenho/docs/TYPESCAPE.md` — the typed universe by domain + the sui bridge
 - `engenho/docs/{DISTRIBUTED,FABRIC,CONSISTENCY-FABRIC,MANY-FACES,RESILIENCE,LEAN}.md`
 - `theory/ENGENHO.md` — destination, wire-compat contract, phases (§I–§XII)
 
+## Managing the running daemon (control plane — NOT the Kubernetes API)
+
+A running engenho has its own control plane, separate from `:6443`: a local Unix
+socket (always on — the recovery path, serving even when a boot has failed) and
+an optional SPKI-pinned mTLS listener for other machines. It manages the daemon
+itself — nothing about it is a Kubernetes object. Spec:
+`engenho/spec/engenho-control.openapi.yaml`; every operation is one
+`engenho ctl <resource> <verb>`:
+
+| Want | Command |
+|---|---|
+| Is it up, and where in its lifecycle? | `engenho ctl runtime show` (`running` / `failed{phase, retry}` / `stopped` / `wedged`) |
+| Why did a boot fail? | `engenho ctl boot show` · `boot attempts` (per-phase journal) |
+| PKI, store, identity, data-dir layout | `engenho ctl init show` · `pki show` · `store show` |
+| Change config while it runs | `engenho ctl config set <leaf> --value <v>` (persisted override; `--persist false` for memory only) · `config unset` · `config clear` · `config drift` (what overrides shadow in the declared file) |
+| Leaf classes | `engenho ctl config leaves` — `live` (applied now), `respawn` (children moved now), `restart_runtime` (deferred unless `--restart-policy now`), `next_boot`, `not_overridable` |
+| Children (drivers, listeners, lease) | `engenho ctl children list` · `children restart <child>` · `children enable\|disable <driver>` |
+| Stop / start / restart / retry / exit | `engenho ctl runtime stop\|start\|restart\|retry\|exit` (the process stays up when the runtime stops) |
+| What happened | `engenho ctl events list` · `logs list` · `audit list` (BLAKE3-chained) |
+| Destructive re-init | `engenho ctl reinit rotate-admin-token\|reseed-pki\|wipe-store`, `control rotate-identity` — a confirmation handshake (type the cluster's name; `--confirm-phrase` off a terminal); replaced files go to `data_dir/control/attic/`, never deleted |
+| Another machine | `engenho ctl --remote <name> …` (`~/.config/engenho/remotes.yaml`; `engenho remote keygen <name>` makes this machine's key, whose pin the server must list) |
+
+Authority is the kernel's (socket peer uid; group members get `groupTier`) or
+the pin's tier, capped by `--ceiling`. Exit codes: 0 answered, 2 usage, 3
+refused (the reason and what would be accepted are printed), 4 blind — conclude
+nothing — 5 confirmation aborted. Store-touching re-inits need the runtime
+stopped (`runtime stop`) in the epoch the confirmation was prepared in.
+
+**Agents:** the engenho MCP generates one `control_<resource>_<verb>` tool per
+operation from the same catalog. Observe tier only unless the server was
+launched with `--allow-mutate`; destructive operations are never tools. The
+daemon caps every call at that tier and audits it as `agent`.
+
 ## Reading live cluster state (engenho MCP)
 
-The MCP is a **read-only** typed reader over kikai's on-disk state (writer is P2,
-gated on saguão authority). All tools take `{ "cluster": "<name>" }` from kikai's
-`clusters.yaml`. Discover clusters first:
+The `cluster_*` tools are a **read-only** typed reader over kikai's on-disk state
+and the live Kubernetes API (Kubernetes writes are P2, gated on saguão
+authority). They take `{ "cluster": "<name>" }` from kikai's `clusters.yaml`.
+Discover clusters first:
 
 ```bash
 ls ~/.local/share/kikai        # registered clusters with on-disk state
@@ -224,8 +259,11 @@ that returns success is the failure mode these exist to prevent.
 | source-of-truth reconciler `(defsistema)` + Viggy 7-beat | `engenho-fonte` |
 | sui↔engenho bridge (`TypescapeValue`, `Typescape`) | `engenho-sui-typescape` |
 | shikumi config surface | `engenho-config`; bootstrap render: `engenho-cluster-config(-render)` |
-| **formalized state machines + typescape regs** | `engenho-machines` (`MaterializationMachine`, `TopologyNodeMachine`) |
-| MCP reader/writer | `engenho-mcp` |
+| the daemon's supervisor + lifecycle machine, boot journal, control service | `engenho-runtime` (`lifecycle/`, `boot/`, `control/`) |
+| control API types (spec-generated `OperationId`/`CATALOG`), SPKI pins | `engenho-control-types` |
+| control socket, remote listener, grants, audit chain | `engenho-control-server` |
+| control client (socket resolution, `render`, remotes) | `engenho-control-client` |
+| MCP reader + control tools (writer trait: P2) | `engenho-mcp` |
 
 Fast code search: `mcp__codesearch__search_exact` / `semantic_search` (zoekt is
 RETIRED since 2026-08-12), or `cargo test -p <crate>` to verify a change.
@@ -256,12 +294,18 @@ the `engenho-ipam` plugin).
 
 ## Common tasks
 
+- **"Is this machine's engenho healthy / why won't it boot?"** → `engenho ctl
+  runtime show`, then `boot show` (the failed phase and its error), `config
+  drift`, `logs list --level warn`. A held failure is fixed by `config set …`
+  (an override) or a declared-file change, then `runtime retry` — no restart of
+  the process.
 - **"What's the state of cluster X?"** → `mcp__engenho__cluster_status` then
   `cluster_pods` / `cluster_resource_list`.
 - **"Bring up / tear down the local cluster"** → kikai `up` / `destroy` (suggest the
   user run via `! kikai …` for interactive auth).
 - **"Where is the <X> state machine?"** → `engenho/docs/STATE-MACHINES.md` index →
-  the named source file; formalized FSMs in `engenho-machines`.
+  the named source file (the doc names code, never a model; `ci/doc-sources.tlisp`
+  fails CI on a pointer that stops resolving).
 - **"Why engenho / is this worth it / what is it for?"** → read
   [`docs/WHY-ENGENHO.md`](https://github.com/pleme-io/engenho/blob/main/docs/WHY-ENGENHO.md). Short version:
   Kubernetes and Nomad are the same shape in different packaging (server/client
@@ -272,8 +316,9 @@ the `engenho-ipam` plugin).
   `relogio` is a typed clock seam, every side effect is behind an Environment
   trait). The named next step is auditing away stray `SystemTime::now()` calls.
 - **"Add a new typed primitive to the typescape"** → impl `Typescape` (round-trip
-  law) per `engenho/docs/TYPESCAPE.md`; substrate types use the local-newtype
-  pattern (`engenho-machines/src/shape_ts.rs`) to dodge the orphan rule.
+  law) per `engenho/docs/TYPESCAPE.md`, through the sui bridge
+  (`engenho-sui-typescape`); a foreign type takes a local newtype to dodge the
+  orphan rule.
 
 This skill is deployed via blackmatter home-manager; changes land on `nix run
 .#rebuild` from the nix repo.
