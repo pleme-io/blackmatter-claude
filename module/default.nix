@@ -405,7 +405,10 @@ let
 
 in
 {
-  imports = [ ./desktop/home.nix ];
+  imports = [
+    ./desktop/home.nix
+    ./tool-shell.nix
+  ];
 
   options.blackmatter.components.claude = {
     enable = mkEnableOption "Claude Code configuration";
