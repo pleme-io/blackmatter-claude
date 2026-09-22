@@ -1,5 +1,5 @@
 # Claude Desktop (macOS) from Anthropic's signed universal zip.
-# The pin is written by `nix run .#claude-desktop-bump`; never edit it by hand.
+# The pin is written by `nix run .#claude-desktop-bump` (then commit pin.json); never edit it by hand.
 # No fixup: patching any byte would invalidate Anthropic's code signature.
 {
   lib,
@@ -8,7 +8,7 @@
   unzip,
 }:
 let
-  pin = lib.importJSON ./claude-desktop-pin.json;
+  pin = lib.importJSON ./pin.json;
 in
 stdenvNoCC.mkDerivation {
   pname = "claude-desktop";

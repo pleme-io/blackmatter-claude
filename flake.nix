@@ -65,10 +65,11 @@
       name = "blackmatter-claude";
       description = "Claude Code integration — LSP, MCP servers, skills, guardrails";
       modules.homeManager = import ./module { inherit claude-code; };
+      modules.darwin = ./module/desktop/darwin.nix;
       overlay = final: prev: {
         guardrail = guardrail.packages.${prev.stdenv.hostPlatform.system}.default;
         guardrail-rules = guardrail + "/rules";
-        claude-desktop = final.callPackage ./module/claude-desktop.nix { };
+        claude-desktop = final.callPackage ./module/desktop/package.nix { };
         # Returns with the input above. Its absence is what the module's
         # assertion names, so enabling noroshi today fails with a sentence
         # instead of `attribute 'noroshi' missing`.
@@ -96,7 +97,7 @@
               }
               ''
                 mkdir -p $out/bin
-                rustc --edition 2021 -O -o $out/bin/claude-desktop-bump ${./module/claude-desktop-bump.rs}
+                rustc --edition 2021 -O -o $out/bin/claude-desktop-bump ${./module/desktop/bump.rs}
               ''
           }/bin/claude-desktop-bump";
         };
@@ -176,7 +177,7 @@
                 ];
               }
               ''
-                rustc --edition 2021 --test -o test-bin ${./module/claude-desktop-bump.rs}
+                rustc --edition 2021 --test -o test-bin ${./module/desktop/bump.rs}
                 ./test-bin --test-threads=1
                 touch $out
               '';

@@ -1,4 +1,4 @@
-// claude-desktop-bump — refresh module/claude-desktop-pin.json to Anthropic's
+// claude-desktop-bump — refresh module/desktop/pin.json to Anthropic's
 // current macOS release.
 //
 // Anthropic publishes no stable "latest" download URL — every build is a
@@ -15,7 +15,7 @@
 use std::process::Command;
 
 const FEED: &str = "https://downloads.claude.ai/releases/darwin/universal/RELEASES.json";
-const DEFAULT_PIN: &str = "module/claude-desktop-pin.json";
+const DEFAULT_PIN: &str = "module/desktop/pin.json";
 
 fn main() {
     let pin_path = std::env::args().nth(1).unwrap_or_else(|| DEFAULT_PIN.to_string());
