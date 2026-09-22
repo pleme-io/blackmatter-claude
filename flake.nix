@@ -68,6 +68,7 @@
       overlay = final: prev: {
         guardrail = guardrail.packages.${prev.stdenv.hostPlatform.system}.default;
         guardrail-rules = guardrail + "/rules";
+        claude-desktop = final.callPackage ./module/claude-desktop.nix { };
         # Returns with the input above. Its absence is what the module's
         # assertion names, so enabling noroshi today fails with a sentence
         # instead of `attribute 'noroshi' missing`.
@@ -81,6 +82,26 @@
       # (and the blackmatter aggregator's fleet-wide check roll-up) proves
       # them on every change instead of relying on a human remembering to
       # run them by hand.
+      # `nix run .#claude-desktop-bump` (repo root) rewrites the Desktop pin.
+      extraApps = pkgs: {
+        claude-desktop-bump = {
+          type = "app";
+          program = "${
+            pkgs.runCommand "claude-desktop-bump"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.stdenv.cc
+                ];
+              }
+              ''
+                mkdir -p $out/bin
+                rustc --edition 2021 -O -o $out/bin/claude-desktop-bump ${./module/claude-desktop-bump.rs}
+              ''
+          }/bin/claude-desktop-bump";
+        };
+      };
+
       extraChecks =
         pkgs:
         let
@@ -146,6 +167,20 @@
           };
         in
         {
+          claude-desktop-bump-tests =
+            pkgs.runCommand "claude-desktop-bump-tests"
+              {
+                nativeBuildInputs = [
+                  pkgs.rustc
+                  pkgs.stdenv.cc
+                ];
+              }
+              ''
+                rustc --edition 2021 --test -o test-bin ${./module/claude-desktop-bump.rs}
+                ./test-bin --test-threads=1
+                touch $out
+              '';
+
           claude-config-merge-tests =
             pkgs.runCommand "claude-config-merge-tests"
               {

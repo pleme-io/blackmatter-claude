@@ -424,7 +424,13 @@ in
     # declared set is the whole set, and anything added in the app's UI is
     # removed on the next activation.
     desktop = {
-      enable = mkEnableOption "declarative Claude Desktop config (macOS)";
+      enable = mkEnableOption "Claude Desktop (macOS): the app from Nix plus its config";
+      package = mkOption {
+        type = types.package;
+        default = pkgs.callPackage ./claude-desktop.nix { };
+        defaultText = literalExpression "pkgs.callPackage ./claude-desktop.nix { }";
+        description = "Claude Desktop package; pinned by `nix run .#claude-desktop-bump`.";
+      };
       configPath = mkOption {
         type = types.str;
         default = "${config.home.homeDirectory}/Library/Application Support/Claude/claude_desktop_config.json";
@@ -453,6 +459,7 @@ in
 
   config = mkMerge [
     (mkIf (cfg.desktop.enable && isDarwin) {
+      home.packages = [ cfg.desktop.package ];
       home.activation.claude-desktop-config =
         let
           managed = pkgs.writeText "claude-desktop-managed.json" (
