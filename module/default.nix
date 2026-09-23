@@ -605,8 +605,25 @@ in
         }
       ];
 
-      # PostToolUse hook: after a Grep|Glob runs over an indexed repo, inject
-      # advisory context nudging the next lookup toward mcp__zoekt__search.
+      # PostToolUse hooks:
+      #   • Grep|Glob   → advisory context nudging the next lookup toward the
+      #                   codesearch index.
+      #   • Bash|Write  → mint nudge: the call just created a repo ROOT under
+      #                   the org root (or a repo-defining file in one), so
+      #                   route the name through /naming before it sets.
+      #
+      # ★ WHY THE MINT NUDGE IS A HOOK AND NOT PROSE (measured 2026-09-23).
+      # An agent scaffolded a new fleet tool and named it with an ad-hoc `rg`
+      # sweep. The `naming` skill was DEPLOYED, its description already fires
+      # on "minting any new crate / repo / doctrine / primitive", and a
+      # research pass in the same session had just named theory/NAMING.md and
+      # the skill by name. Every advisory surface was correct and present, and
+      # none of them reached the moment the name was chosen. A hook rides the
+      # tool call that mints the thing, which is that moment.
+      #
+      # Advisory only — it never blocks. Naming is a judgement, and it stays
+      # silent for work INSIDE an existing repo, because a nudge that fires on
+      # every mkdir is one the reader learns to skip.
       blackmatter.components.claude.hooks.PostToolUse = [
         {
           matcher = "Grep|Glob";
@@ -614,6 +631,15 @@ in
             {
               type = "command";
               command = "${pkgs.guardrail}/bin/guardrail search-advise";
+            }
+          ];
+        }
+        {
+          matcher = "Bash|Write";
+          hooks = [
+            {
+              type = "command";
+              command = "${pkgs.guardrail}/bin/guardrail mint-advise";
             }
           ];
         }
