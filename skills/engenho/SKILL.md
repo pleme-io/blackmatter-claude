@@ -245,6 +245,16 @@ an address either way and `kubectl` shows it either way.
 When adding a capability that cannot work on the host, copy this shape. A stub
 that returns success is the failure mode these exist to prevent.
 
+### engenho as a node's whole service layer
+
+The direction for Linux hosts is that the host OS only boots the machine and runs
+engenho, and everything else the host does runs on engenho as versioned Helm
+releases. On the `native` backend a pod's image is a realised Nix closure run as a
+host process. Every capability a host's services need from engenho (devices, host
+networking, restart and ordering guarantees, secrets) is therefore engenho's
+backlog, recorded in `docs/QUALIFICATION.md` with a failing case, the same as a
+qualification gap below.
+
 ### engenho as a qualification substrate — consumers' needs are its backlog
 
 A local engenho cluster is used to qualify manifests bound for upstream
