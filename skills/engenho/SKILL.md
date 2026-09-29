@@ -245,6 +245,18 @@ an address either way and `kubectl` shows it either way.
 When adding a capability that cannot work on the host, copy this shape. A stub
 that returns success is the failure mode these exist to prevent.
 
+### Known API-compatibility gaps (measured)
+
+A pass on engenho is a floor, not proof of upstream `kube-apiserver` behaviour.
+Record each gap here until the face rejects what upstream rejects.
+
+| Measured | Input | engenho | upstream |
+|---|---|---|---|
+| 2026-09-29, `engenho-ryn-594e890c`, v1.34.0 face, `kubectl apply --dry-run=server` | Service `spec.ports[].port: "8010"` (a string for an int32) | accepted | rejected: `cannot unmarshal string into ... of type int32` (known upstream behaviour; the upstream side was not re-run that day) |
+
+Anyone using an engenho cluster to pre-qualify manifests bound for upstream
+Kubernetes must treat a type or schema negative as unproven until upstream sees it.
+
 ## Navigating the codebase (where things live)
 
 | Concern | Crate(s) |
