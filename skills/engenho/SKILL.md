@@ -76,6 +76,8 @@ Kubernetes (and Nomad, and PureRaft) distribution. One design, three axes:
 
 ## Authoritative docs (read these first)
 
+- `engenho/docs/FLEET-DESIGN.md` — the whole design: engenho on every node, every state class recoverable, one multi-raft engine, fenced role leases and a moving control plane, capability-inferred placement, movement, allocation, per-release API faces, the node as a release, and the build order (rungs R0–R8). Read it before any distributed, placement or GitOps work
+- `engenho/docs/RECOVERABLE-STATE.md` — the consensus seals (durable votes, quorum-gated promotion, fencing) and their tiers
 - `engenho/docs/STRATEGY.md` — invariants + action taxonomy + phase spine
 - `engenho/docs/CONTROL-PLANE.md` — managing a running daemon: lifecycle, socket + remote trust, overrides, children, re-initialization, MCP
 - `engenho/docs/STATE-MACHINES.md` — the 13-machine catalog (states/events/transitions/source); ⑬ is the daemon lifecycle
@@ -254,6 +256,11 @@ host process. Every capability a host's services need from engenho (devices, hos
 networking, restart and ordering guarantees, secrets) is therefore engenho's
 backlog, recorded in `docs/QUALIFICATION.md` with a failing case, the same as a
 qualification gap below.
+
+The step after that is the node itself: below a thin NixOS base, the system
+generation, packages and services are one release, served as `NixClosure`,
+`NixProfile` and `NodeGeneration` beside the Flux kinds, and a chart picks the
+Kubernetes API face it runs against (`docs/FLEET-DESIGN.md` §9.1 and §10).
 
 ### engenho as a qualification substrate — consumers' needs are its backlog
 
