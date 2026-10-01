@@ -74,9 +74,10 @@ Cheap sources, check every invocation:
   (`jira_get_sprint_issues` / `jira_search` with `assignee = currentUser()
   AND sprint in openSprints()`), read for status and any blocking
   transitions available right now.
-- **Memory's active-initiatives index** (`MEMORY.md`) — cross-reference,
+- **The knowledge-base hot indexes** (each scope's `INDEX.md`, imported by
+  the CLAUDE.md chain; agent memory is only an inbox now) — cross-reference,
   but treat every line as a *claim to verify*, not a fact to present. A
-  memory saying a PR is open must be re-checked against the real PR state
+  note saying a PR is open must be re-checked against the real PR state
   before it's allowed to become "the next action" — per
   [[reference_reality_over_inference]] and the "before recommending from
   memory" rule: a memory is frozen at write time, reality may have moved.
@@ -112,7 +113,7 @@ Score every live candidate this way, highest tier wins:
    something else on the list (a fan-in point) — worth surfacing even if
    it takes more than a glance.
 4. **Plain new work, no urgency signal.** Present only when nothing above
-   exists. If several are tied, use the memory index to see which one has
+   exists. If several are tied, use the knowledge index to see which one has
    an external commitment or timeline attached ("Why:" lines exist for
    exactly this).
 

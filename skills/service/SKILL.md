@@ -103,10 +103,10 @@ cache:
 name: my-product
 environments:
   staging:
-    cluster: zek
+    cluster: staging-cluster
     namespace: my-product-staging
   production:
-    cluster: plo
+    cluster: prod-cluster
     namespace: my-product-prod
 release:
   services:

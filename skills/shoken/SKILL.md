@@ -86,9 +86,9 @@ four digits, the README is the defect. Two repos carried that exact line
 on 2026-08-30 — engenho (3,556 tests) and magma (1,334 tests, plus a
 verified mTLS go-plugin handshake against real provider binaries).
 
-Say what is real, then say what is absent. `genkan/README.md` is the
-in-fleet exemplar: *"Status: M0. There is no PAM linkage, no daemon, no
-pixels, no libc, and no compositor. Do not read anything here as a working
+Say what is real, then say what is absent. The shape to copy, from an M0
+login-manager status line: *"Status: M0. There is no PAM linkage, no daemon,
+no pixels, no libc, and no compositor. Do not read anything here as a working
 login manager."* Nobody reading that feels misled in either direction.
 
 ### 3. The install command installs YOUR project
@@ -192,11 +192,11 @@ status line, and only because 3,556 passing tests said so.
 
 ## Related
 
-- **Naming laws** — `pleme-io/theory/NAMING.md`. Corpus-check any new
-  name; reasoning that a word is free fails silently. `genkan` looked free
-  and is a live repo.
-- **Tier honesty** — `theory/UNREPRESENTABILITY.md` §II. Check 5 is that
-  rule applied to a status table.
+- **Naming laws** — the `naming` skill. Corpus-check any new name;
+  reasoning that a word is free fails silently. `genkan` looked free and is
+  a taken repo name.
+- **Tier honesty** — the unrepresentability doc in the operator's private
+  theory repo (§II). Check 5 is that rule applied to a status table.
 - **omote (表)** — the CLI *contract* as a typed test corpus. shoken asks
   whether `--help` exists and tells the truth; omote asks whether the
   whole CLI surface behaves. Run shoken first; it is cheaper.

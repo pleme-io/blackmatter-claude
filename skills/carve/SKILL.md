@@ -31,20 +31,20 @@ metadata:
 
 # carve — monolithic-branch → scope-aligned stacked-PR delivery
 
-> **Canonical source.** The authoritative version of this skill lives in the
-> private blackmatter skills repo and is synced (via home-manager) to
-> `~/.claude/skills/carve/SKILL.md`. Edit it at the canonical source, not
-> here — local edits at the deployed path are overwritten on the next sync.
+> **Canonical source.** This file is the canonical source; home-manager
+> deploys it to `~/.claude/skills/carve/SKILL.md`. Edit it here, never at the
+> deployed path: local edits there are overwritten on the next rebuild.
 
 This skill walks a development branch through the carve pattern:
 analyse → operator-edit scopes → re-score → verify → **preflight → prove →
 report** → execute → push + PR creation → tracker sync → restack on review
 feedback.
 
-- **Theory:** `pleme-io/theory/CARVE.md` (the WHY — the nine principles)
-- **Operator how-to:** `pleme-io/carve/docs/operator-howto.md` (a generic
+- **Theory:** the carve doc in the operator's private theory repo (the WHY —
+  the nine principles)
+- **Operator how-to:** the carve tool's own operator how-to (a generic
   offline + layer + net-diff worked example)
-- **Tool repo:** `pleme-io/carve` (the binary + types)
+- **Tool:** the `carve` binary and its types (a private repo)
 - **Pre-merge sibling skill:** `vitrine` (post-carve evidence delivery)
 
 This skill is the operator-side automation — it drives the `carve` binary,

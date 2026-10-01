@@ -69,10 +69,10 @@ Kubernetes (and Nomad, and PureRaft) distribution. One design, three axes:
 
 | Repo | Role |
 |---|---|
-| `~/code/github/pleme-io/engenho` | the 20-crate runtime workspace |
-| `~/code/github/pleme-io/kikai` | cluster lifecycle backend (k3s VMs via QEMU/kasou) |
-| `~/code/github/pleme-io/engenho-promessa-controllers` | Viggy TargetControllers (SLA/CostBudget/Compliance/CustomerKpi/Security) + the image-validation platform |
-| `~/code/github/pleme-io/theory/ENGENHO.md` | canonical destination doc (CSE) |
+| `pleme-io/engenho` | the 20-crate runtime workspace |
+| cluster lifecycle backend (private) | k3s VMs via QEMU/kasou |
+| Viggy target controllers (private) | SLA/CostBudget/Compliance/CustomerKpi/Security + the image-validation platform |
+| the engenho doc in the operator's private theory repo | canonical destination doc (CSE) |
 
 ## Authoritative docs (read these first)
 
@@ -83,7 +83,7 @@ Kubernetes (and Nomad, and PureRaft) distribution. One design, three axes:
 - `engenho/docs/STATE-MACHINES.md` — the 13-machine catalog (states/events/transitions/source); ⑬ is the daemon lifecycle
 - `engenho/docs/TYPESCAPE.md` — the typed universe by domain + the sui bridge
 - `engenho/docs/{DISTRIBUTED,FABRIC,CONSISTENCY-FABRIC,MANY-FACES,RESILIENCE,LEAN}.md`
-- `theory/ENGENHO.md` — destination, wire-compat contract, phases (§I–§XII)
+- the engenho theory doc (private theory repo) — destination, wire-compat contract, phases (§I–§XII)
 
 ## Managing the running daemon (control plane — NOT the Kubernetes API)
 
@@ -144,7 +144,7 @@ Secrets are **redacted at the MCP boundary** by type — never expect plaintext.
 
 ## kikai cluster lifecycle
 
-`kikai` drives the 14-state cluster FSM (`kikai/src/state.rs`, exhaustively
+`kikai` drives the 14-state cluster FSM (its `state.rs`, exhaustively
 proptested). Subcommands (run from a cluster's nix dir; prefer the user runs
 interactive ones via `! kikai …`):
 
@@ -297,8 +297,8 @@ Add new gaps there, not here.
 | control client (socket resolution, `render`, remotes) | `engenho-control-client` |
 | MCP reader + control tools (writer trait: P2) | `engenho-mcp` |
 
-Fast code search: `mcp__codesearch__search_exact` / `semantic_search` (zoekt is
-RETIRED since 2026-08-12), or `cargo test -p <crate>` to verify a change.
+Fast code search: `mcp__codesearch__search_exact` / `semantic_search`, or
+`cargo test -p <crate>` to verify a change.
 
 Newer crates not in the table above: `engenho-etcd` (etcd v3 façade + the
 `/registry` keyspace), `engenho-csi` (CSI client, registration, the

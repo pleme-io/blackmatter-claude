@@ -50,7 +50,7 @@ Each action is **idempotent**. Each label is **stable** (locked by test). `depth
 
 ## Codified API
 
-`pangea-operator/src/controller/escalation.rs`:
+`pangea-operator/pangea-operator/src/controller/escalation.rs` (repo / crate / path):
 
 ```rust
 pub enum EscalationAction { Retry, RefreshSource, ReloadGems, RecycleWorkers, PauseAndAlert }
@@ -136,8 +136,8 @@ spec:
 ## Composes with
 
 * **controller-detection-axis** skill — the detection axis NAMES the anomaly via `ConflictDetector`; this skill TAKES ACTION over time. Same `Conflict` shape, different axis.
-* `settling.rs` — provides stuck signals (cycle-count + fingerprint). Orthogonal to time-graded depth.
-* `error_policy.rs` — categorizes errors. Pre-step to the ladder.
+* `pangea-operator/pangea-operator/src/controller/settling.rs` — provides stuck signals (cycle-count + fingerprint). Orthogonal to time-graded depth.
+* `pangea-operator/pangea-operator/src/controller/error_policy.rs` — categorizes errors. Pre-step to the ladder.
 
 ## Workflow when invoking
 
@@ -147,11 +147,14 @@ spec:
 4. **Surface-first**: log + status + Event. Handlers later.
 5. **Pure tests**: TempDir-free; just `Duration::from_secs(...)` inputs and `EscalationAction` assertions.
 
-## Related memories
+## Related knowledge notes
 
-* `memory/project_escalation_ladder.md` — durable knowledge.
-* `memory/project_controller_detection_axis.md` — the detect sibling axis.
-* `memory/project_operator_observability_backlog.md` — slice-4 status field consumer.
+In the operator's private knowledge base (found by filename; they were agent
+memories until 2026-10-01):
+
+* `project_escalation_ladder.md` — durable knowledge.
+* `project_controller_detection_axis.md` — the detect sibling axis.
+* `project_operator_observability_backlog.md` — slice-4 status field consumer.
 
 ## Triggers
 

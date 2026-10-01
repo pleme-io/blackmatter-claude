@@ -26,8 +26,9 @@ This skill walks a change through the vitrine pattern: implement → apply
 to target via Pattern A (or direct terragrunt apply) → capture three-layer
 evidence → embed in PR → review → merge → remove Pattern A override.
 
-- **Theory:** `pleme-io/theory/VITRINE.md` (the WHY)
-- **Operator reference:** `pleme-io/docs/vitrine.md` (the HOW)
+- **Theory:** the vitrine doc in the operator's private theory repo (the WHY)
+- **Operator reference:** the vitrine operator reference in the operator's
+  private docs (the HOW)
 
 This skill is the operator-side automation — it walks the user through
 the steps, captures evidence, and produces the PR-description block
@@ -69,8 +70,8 @@ If unclear, ask the operator before proceeding.
 
 ## Step 2 — Pre-flight
 
-Run the pre-flight checklist (canonical list in
-`pleme-io/docs/vitrine.md#pre-flight-checklist-printable`).
+Run the pre-flight checklist (canonical list: the printable pre-flight
+checklist in the operator reference).
 
 Report failures up front. Don't proceed past pre-flight without clean
 status. Common failure modes to surface explicitly:
@@ -113,7 +114,7 @@ time and apply time. Skip `-auto-approve` on a fresh plan.
 
 ### GitOps chart (Helm + ArgoCD ApplicationSet) — Pattern A
 
-**Preferred (binary):** invoke the `vitrine` CLI from `pleme-io/vitrine`:
+**Preferred (binary):** invoke the `vitrine` CLI:
 
 ```bash
 vitrine isolate <chart-name> \
@@ -185,8 +186,8 @@ evidence — reviewers must be able to re-run.
 
 ## Step 6 — Embed evidence + rollback in PR description
 
-Compose the evidence into the PR body using the layout in
-`pleme-io/docs/vitrine.md#5-rollback-noted-evidence-committed`. Sections:
+Compose the evidence into the PR body using the operator reference's
+"rollback noted, evidence committed" layout. Sections:
 
 1. **Summary**
 2. **Pre-flight** — auth, drift, working tree, context
@@ -243,7 +244,7 @@ or a 5-line code block.
 
 ## Substrate status
 
-v0.1 (2026-05-18) — `pleme-io/vitrine` Rust CLI exists. Implemented:
+v0.1 (2026-05-18) — the `vitrine` Rust CLI exists. Implemented:
 
 - ✅ `vitrine isolate <chart> --branch <feature> --cluster-terragrunt <path>`
 - ✅ `vitrine release <chart> --cluster-terragrunt <path>`

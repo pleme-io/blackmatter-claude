@@ -170,5 +170,10 @@ After deploying a new `.envrc`, run `direnv allow <path>` once (direnv security 
 
 ## Nix Integration
 
-Config is generated declaratively via `home.file` in the nix repo.
-To modify the workspace config, edit `nix/nodes/cid/default.nix` and rebuild.
+Config is generated declaratively by the blackmatter home-manager modules, not
+by a node file. Each org is declared once (substrate's `kata.mkOrgs`), and its
+tend workspace, CLAUDE.md org entry, codesearch source and `.envrc` are derived
+from that one declaration. To change a workspace, edit the org declaration in
+the blackmatter module that owns the org (for example the `workspace.orgs`
+option of `blackmatter.components.pleme`), then rebuild. Never edit the
+deployed `~/.config/tend/config.yaml`.

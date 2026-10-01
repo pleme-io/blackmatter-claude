@@ -23,6 +23,7 @@ understanding at each rung before building higher**.
 ## When editing
 
 Keep the two invariants load-bearing in any change. Bump `metadata.version` +
-`metadata.last_verified` in `SKILL.md`, update the `teach-human` entry in
-`blackmatter-pleme/skill-map.d/meta.yaml`, and bump `skill-map.d/config.yaml`
+`metadata.last_verified` in `SKILL.md`, update the `teach-human` entry in the
+skill map (`skill-map.d/meta.yaml` in the skills repo that carries the map), and
+bump `skill-map.d/config.yaml`
 (`version` + `lastModified`). Validate with `skill-lint check`.

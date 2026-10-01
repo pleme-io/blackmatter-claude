@@ -52,7 +52,7 @@ If NONE apply, the preprocessing is scalar; the axis is overhead, skip it.
 
 ## The fundamental shape (Rust)
 
-The codified primitives live in `~/code/github/pleme-io/pangea-operator/pangea-ruby-eval/src/evaluator.rs`:
+The codified primitives live in `pangea-operator/pangea-ruby-eval/src/evaluator.rs` (repo / crate / path):
 
 ```rust
 // 1. The detector trait (open for new bug classes).
@@ -131,7 +131,7 @@ fn detects_<bug_class>_when_<condition>() {
 When slice 4 lands `.status.anomalies[]`:
 
 * CRD `InfrastructureTemplateStatus.anomalies: Option<Vec<Anomaly>>` where `Anomaly` is the on-wire shape of `Conflict`.
-* `controller/template/status.rs` carries `ContextWarnings.conflicts` → `status.anomalies`.
+* `pangea-operator/pangea-operator/src/controller/template/status.rs` carries `ContextWarnings.conflicts` → `status.anomalies`.
 * k8s `Event` with `reason = c.detector`, `message = c.message`, fingerprint by `(template, c.detector, c.category)` for deduplication.
 * Prometheus `pangea_compile_conflicts_total{detector="<bug_class>"}`.
 
@@ -179,10 +179,10 @@ When the user describes a new preprocessing / DSL / setup step OR a cryptic down
 
 4. **Sketch the planner (if applicable)**: is there a planner-layer fix that pulls the decision UP into a pure function? If yes, the labeled-source pattern (`<Surface>Source` enum + `<Surface>Entry` struct + `plan_<surface>` fn + `CompileContext::from_plan`) is the recipe. If no, document why the detector is informational only.
 
-5. **Open files in order**:
-   - `pangea-ruby-eval/src/evaluator.rs` — detector + planner go here for compile-isolation bug classes.
-   - `pangea-operator/src/ruby/owner.rs` — for `tracing::warn!` wiring.
-   - (Slice 4) `pangea-operator/src/controller/template/status.rs` — for `.status.anomalies[]`.
+5. **Open files in order** (repo-qualified: `pangea-operator/<crate>/src/…`):
+   - `pangea-operator/pangea-ruby-eval/src/evaluator.rs` — detector + planner go here for compile-isolation bug classes.
+   - `pangea-operator/pangea-operator/src/ruby/owner.rs` — for `tracing::warn!` wiring.
+   - (Slice 4) `pangea-operator/pangea-operator/src/controller/template/status.rs` — for `.status.anomalies[]`.
 
 6. **Tests first**: pure unit tests for the detector + planner. TempDir + filesystem layout + assert. No Ruby needed for pure-function tests.
 
@@ -199,12 +199,12 @@ When the user describes a new preprocessing / DSL / setup step OR a cryptic down
 | Detector that lives in the controller layer | Couples the bug class to the controller; can't reuse from other entrypoints | Detector belongs in `pangea-ruby-eval` (or appropriate primitive crate). |
 | Wiring fix into `status.anomalies[]` BEFORE the slice-4 CRD change | Type churn across the schema | Wait for slice 4 schema; until then, `tracing::warn!` is the audit surface. |
 
-## Related memories
+## Related knowledge notes
 
-Under the project memory directory for the workspace this work was done in
-(`~/.claude/projects/<project>/memory/`):
+In the operator's private knowledge base (found by filename; they were agent
+memories until 2026-10-01):
 
-* `project_controller_detection_axis.md` — the durable memory.
+* `project_controller_detection_axis.md` — the durable note.
 * `project_compile_isolation_shield.md` — the `CompileContext` primitive the detector hangs off.
 * `project_ruby_pool_double_load_fix.md` — the bug class that drove the codification.
 * `project_operator_observability_backlog.md` — the slice-4 status/events/metrics consumers.

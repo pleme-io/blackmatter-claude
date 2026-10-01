@@ -44,6 +44,9 @@ Git is none of those. So the pass does not trim memory to fit; it empties it.
 - Filenames do not change in the move, so every place that cites a note by name
   still resolves (`fd <name>` in the knowledge base). Do not mass-edit citing
   docs.
+- Strip `## Index-tail` and relocated `MEMORY.md`-header sections from a note as
+  it moves: an index lives only in `INDEX.md` / `INDEX-FULL.md`, never inside a
+  note.
 - Private content never goes to a public repo, CLAUDE.md included: check repo
   visibility before choosing a home.
 - Scan for credential-shaped strings before the first commit, and let the
@@ -182,9 +185,9 @@ Use an array, a `while read` loop, or do the file operations in Python.
 ## Ghost pointers — audit outward too
 
 A memory corpus is cited *from* CLAUDE.md files. Grep the repos for memory
-filenames and confirm each resolves. The same pass found `nix/CLAUDE.md` citing
-`reference_rio_live_builder` (twice) and `reference_shepherd_loop` — neither had
-ever existed. **A ghost pointer is worse than no citation**: a reader chasing a
+filenames and confirm each resolves. The same pass found the operator's private
+config repo's CLAUDE.md citing two memory filenames (one of them twice) that had
+never existed. **A ghost pointer is worse than no citation**: a reader chasing a
 named record assumes the detail exists somewhere and stops looking, so the
 citation suppresses the search it was meant to start.
 

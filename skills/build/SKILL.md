@@ -118,13 +118,13 @@ Then proceed to Step 4 to create the corresponding domain skill.
 Every substrate recipe should have a corresponding skill that teaches how to use it.
 
 1. **Determine placement:**
-   - Generic recipe (any org could use) → `blackmatter-claude/skills/{name}/`
-   - Org-specific conventions → `blackmatter-pleme/skills/{name}/`
+   - Generic recipe (any org could use) → this repo's `skills/{name}/`
+   - Org-specific conventions → the org's own skills repo, `skills/{name}/`
 
 2. **Create the skill** with front matter + body:
 
 ```bash
-mkdir -p ~/code/github/pleme-io/{repo}/skills/{skill-name}
+mkdir -p <skills-repo>/skills/{skill-name}
 ```
 
 Write `SKILL.md` covering:
@@ -138,8 +138,8 @@ Write `SKILL.md` covering:
 3. **Add to the skill map** (per-domain file in `skill-map.d/`):
 
 ```bash
-# Edit the appropriate domain file
-vim ~/code/github/pleme-io/blackmatter-pleme/skill-map.d/{domain}.yaml
+# Edit the appropriate domain file in the skills repo that carries the map
+vim <skills-repo>/skill-map.d/{domain}.yaml
 ```
 
 Add the entry with description, domain, repo, concerns, references.
@@ -147,7 +147,7 @@ Add the entry with description, domain, repo, concerns, references.
 4. **Run `skill-lint check`** to verify sync + references:
 
 ```bash
-skill-lint check --skills-dir ~/code/github/pleme-io/blackmatter-pleme/skills
+skill-lint check --skills-dir <skills-repo>/skills
 ```
 
 5. **Commit skill + map together**, push, flake update, rebuild.

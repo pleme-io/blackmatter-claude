@@ -41,7 +41,7 @@ Three axes, same `Conflict` typed shape. Same audit consumers.
 | Bug class is named (typed detector exists) | No — promote to typed detector (see controller-detection-axis). |
 | Single-shot error you'll never see again | No — overhead for no gain. |
 
-## API (pangea-operator/src/controller/anomaly_tracker.rs)
+## API (pangea-operator/pangea-operator/src/controller/anomaly_tracker.rs)
 
 ```rust
 // Pure: strip variable parts + BLAKE3 hash. 12 hex chars.
@@ -130,11 +130,14 @@ This is the FEEDBACK LOOP: opaque-recurring → named-recurring → typed-detect
 4. **(Slice-4) wire to status** — feed Recurrence into `Conflict.evidence`.
 5. **Tune strip rules** — if the canonical form is still too granular for production errors, add a strip rule (file `strip_variable_parts` in anomaly_tracker.rs, add a unit test).
 
-## Related memories
+## Related knowledge notes
 
-* `memory/project_anomaly_recurrence.md` — durable knowledge.
-* `memory/project_controller_detection_axis.md` — sibling typed-detector axis.
-* `memory/project_escalation_ladder.md` — sibling time-gated axis.
+In the operator's private knowledge base (found by filename; they were agent
+memories until 2026-10-01):
+
+* `project_anomaly_recurrence.md` — durable knowledge.
+* `project_controller_detection_axis.md` — sibling typed-detector axis.
+* `project_escalation_ladder.md` — sibling time-gated axis.
 
 ## Triggers
 
