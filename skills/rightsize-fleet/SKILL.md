@@ -1,9 +1,9 @@
 ---
 name: rightsize-fleet
-description: Produce, review, and act on rightsizing recommendations across a fleet. Use when running the periodic rightsizing pass, when investigating a specific resource's sizing, when tuning the policy (headroom vs target utilization tradeoffs), or when wiring rightsizing as a continuous CI gate. Powered by the `rightsize-forge` Rust binary.
+description: Produces and reviews rightsizing recommendations with rightsize-forge. Use for downsize candidates or sizing policy.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   domain_keywords:
     - "rightsize"
     - "rightsizing"

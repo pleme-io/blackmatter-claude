@@ -1,9 +1,9 @@
 ---
 name: cost-attribution
-description: Set up, query, and audit the cost-attribution data plane. Use when wiring a new source into the cost stream, when investigating an attribution gap, when answering "what did X cost last month", or when verifying that the data plane is healthy. Powered by the `attribution-forge` Rust binary.
+description: Wires and audits the cost-attribution data plane with attribution-forge. Use for what did X cost or an attribution gap.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   domain_keywords:
     - "cost-attribution"
     - "billing"

@@ -1,9 +1,9 @@
 ---
 name: unit-economics
-description: Compute, instrument, and interrogate per-unit cost economics — cost-per-customer, cost-per-request, cost-per-tenant, cost-per-feature. Use when pricing a new product, when evaluating gross margin, when answering "what does X cost us per unit", or when wiring a new unit-event stream into the FinOps data plane. Powered by the `unit-econ-forge` Rust binary.
+description: Computes cost-per-unit metrics such as cost-per-request with unit-econ-forge. Use for gross margin or pricing.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   domain_keywords:
     - "unit-economics"
     - "cost-per-customer"

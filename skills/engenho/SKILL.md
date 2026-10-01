@@ -1,9 +1,9 @@
 ---
 name: engenho
-description: Operate and navigate engenho — pleme-io's typed, attested, Rust-native distributed Kubernetes runtime (Pillar 7). Use when managing a running engenho daemon through its control plane (`engenho ctl` locally or `--remote`, or the engenho MCP's control_* tools) — lifecycle, boot journal, init/PKI state, runtime config overrides, children, gated re-initialization — when reading live engenho/kikai cluster state via the engenho MCP, running the kikai cluster lifecycle, locating a subsystem/state-machine/type across the workspace, or reasoning about the distributed (revoada/teia/store), API-compatible (faces), and derivation-substrate layers.
+description: Operates and navigates engenho, the Rust Kubernetes runtime, via engenho ctl, its MCP and kikai. Use for engenho health.
 allowed-tools: Bash, Read, Glob, Grep, mcp__engenho__cluster_status, mcp__engenho__cluster_config, mcp__engenho__cluster_kubeconfig, mcp__engenho__cluster_snapshot_meta, mcp__engenho__cluster_pods, mcp__engenho__cluster_resource_list, mcp__engenho__cluster_resource_get, mcp__engenho__control_hello_show, mcp__engenho__control_runtime_show, mcp__engenho__control_boot_show, mcp__engenho__control_boot_attempts, mcp__engenho__control_init_show, mcp__engenho__control_config_show, mcp__engenho__control_config_leaves, mcp__engenho__control_config_get, mcp__engenho__control_config_overrides, mcp__engenho__control_config_drift, mcp__engenho__control_children_list, mcp__engenho__control_children_get, mcp__engenho__control_pki_show, mcp__engenho__control_store_show, mcp__engenho__control_kubeconfigs_list, mcp__engenho__control_events_list, mcp__engenho__control_logs_list, mcp__engenho__control_audit_list, mcp__engenho__control_control_show
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
   last_verified: "2026-09-22"
   domain_keywords:
     - "engenho"

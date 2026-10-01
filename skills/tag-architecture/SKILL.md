@@ -1,9 +1,9 @@
 ---
 name: tag-architecture
-description: Design, audit, and enforce the cost-allocation tag taxonomy across clouds and Kubernetes. Use when onboarding a new service, when tag coverage drops, when adding a new cost dimension, or when investigating an attribution gap. Powered by the `tag-forge` Rust binary.
+description: Designs and enforces the cost-allocation tag taxonomy with tag-forge. Use when tag coverage drops or a service onboards.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   domain_keywords:
     - "tag"
     - "label"

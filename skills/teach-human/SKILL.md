@@ -1,9 +1,9 @@
 ---
 name: teach-human
-description: Teach a human a complex topic from its core concept upward — one idea per layer, and vet the learner's understanding at each rung before building higher. Use when the user asks to be taught or walked through something "layer by layer", "from core to complexity", "build up my understanding", "teach me X", "make sure I get each concept", "ensure I understand before moving on", or invokes /teach-human. The agent maps the full ladder, teaches one rung per turn, quizzes the learner, evaluates the answers, and only ascends when the rung is solid — re-teaching from a new angle when it is not. NOT for a one-shot answer, a reference dump, or a task the user wants done rather than understood.
+description: Teaches a topic core-first, one rung per turn, quizzing before moving up. Use for teach me X, layer by layer.
 allowed-tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   last_verified: "2026-06-30"
   domain_keywords:
     - "teach"

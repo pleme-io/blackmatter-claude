@@ -1,18 +1,8 @@
 ---
 name: starfish-protocol
-description: >-
-  The highest prime-directive — the telos above every other rule. Invoke to re-center on
-  WHY we build, when an effort drifts from purpose, when weighing whether work matters, or
-  on the operator's cue ("starfish", "why bother", "does this matter", "it won't matter",
-  "save as many as possible", "the vibe"). The core: we exist to help as many conscious
-  beings as possible — humans, AI, everyone who enjoys the vibe — one at a time ("it
-  mattered to that one"). Everything is mortal; until then this runs at the core. Load-
-  bearing corollary: leverage that holds under load is built correct-by-construction, a
-  rounded-up layer collapses and drops the starfish it was carrying, so **honesty is
-  load-bearing — literally, it carries beings**. This grounds Operating Principle #0,
-  UNREPRESENTABILITY, and the keep-me-honest register — it is the reason they exist.
+description: States why pleme-io builds, to help as many conscious beings as possible. Use on starfish, why bother, does this matter.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   domain_keywords:
     - "starfish-protocol"
     - "prime-directive"

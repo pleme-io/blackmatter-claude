@@ -1,9 +1,9 @@
 ---
 name: cost-anomaly
-description: Detect, triage, and root-cause cost anomalies — sudden spend spikes, slow drift, missing-spend cliffs. Use when an anomaly alert fires, when authoring a new detection rule, when investigating a billing surprise, or when designing the next monthly review's anomaly section. Powered by the `anomaly-forge` Rust binary.
+description: Detects and triages cost spikes, drift and missing spend with anomaly-forge. Use when a cost alert fires.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   domain_keywords:
     - "anomaly"
     - "cost-spike"

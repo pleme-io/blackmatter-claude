@@ -1,9 +1,9 @@
 ---
 name: present-next-best-action
-description: Refresh state across every open thread (GitHub PRs, Jira sprint, Confluence, pending tasks, memory-flagged initiatives), rank them, and present exactly ONE next action with live recon so the user can decide fast. Use when the user says "what's next", "what can I do to move things forward", "give me my next best action", invokes /present-next-best-action, or asks to walk their backlog "one by one" / "don't dump everything at once". Built around the user's own stated constraints — thin working memory across sessions, low tolerance for bulk dumps, wants the final click on anything hard-to-reverse to stay theirs. NOT for open-ended backlog grooming, sprint planning, or presenting a menu of options (unless the user explicitly asks to compare choices).
+description: Refreshes open PRs, tickets and tasks live, then presents one ranked next action. Use for what's next, next best action.
 allowed-tools: Read, Bash, Grep, Glob
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   last_verified: "2026-07-14"
   domain_keywords:
     - "what's next"
@@ -151,9 +151,9 @@ say the word").
 - **Never execute the hard-to-reverse step for him.** No merges, no
   force-pushes, no destructive applies — prepare, verify, get to green,
   hand off the click. This is a fixed line, not a per-PR judgment call.
-- **Never reveal AI involvement in any client-facing artifact** (PR
-  comments, Jira comments, Confluence in shared/client spaces) — act and
-  write as the operator, first person, no attribution.
+- **Client-facing artifacts are in the operator's own voice** (PR
+  comments, Jira comments, Confluence in shared/client spaces): first
+  person, as the operator.
 - **One thing at a time, always.** Presenting three ranked options when he
   asked "what's next" is the failure mode this skill exists to prevent.
 - **State the fresh check, don't just assert the conclusion** — "CI is

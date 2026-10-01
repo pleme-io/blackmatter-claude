@@ -1,19 +1,9 @@
 ---
 name: context
-description: >-
-  Create, audit, and maintain CLAUDE.md and ./docs for a repo, AND audit a
-  fleet-scale context budget. Use when a repo lacks a CLAUDE.md, when CLAUDE.md is
-  bloated, when ./docs is disorganized, or when the operator says "context
-  efficiency", "context budget", "the skill listing is too big", "trim CLAUDE.md",
-  "we have too many skills", "context sprawl", or "why isn't my skill being
-  invoked". Part II carries the measured platform caps (1,536-char per-entry skill
-  cap; 1%-of-window listing budget; CLAUDE.md re-injected into every non-Explore
-  subagent), the measurement traps that produce wrong numbers, and a REJECTED
-  table of interventions with published evidence AGAINST them — read it before
-  cutting for file size, reformatting to XML, or building a nested doc index.
+description: Creates and trims CLAUDE.md and ./docs, and audits the skill-listing budget. Use for bloated CLAUDE.md or skill sprawl.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "2.0.0"
+  version: "2.0.1"
   last_verified: "2026-07-27"
   domain_keywords:
     - "CLAUDE.md"

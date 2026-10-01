@@ -1,9 +1,9 @@
 ---
 name: commitment-review
-description: Run the quarterly commitment-portfolio review — what to commit, what to renew, what to let lapse, what to divest. Use when planning a commit purchase, when an existing commit is approaching expiry, when the workload's baseline has shifted, or when the discount catalog changes. Powered by the `commitment-forge` Rust binary.
+description: Reviews the commitment portfolio with commitment-forge. Use for savings plans, CUDs, reserved instances, expiring commits.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   domain_keywords:
     - "commitment"
     - "savings-plan"

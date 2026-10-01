@@ -1,9 +1,9 @@
 ---
 name: vitrine
-description: Deliver a code change to a target environment with pre-merge evidence — Pattern A GitOps override for chart-driven work, structured three-layer evidence capture (TF state, cloud API, functional), PR-as-showcase delivery. Use when shipping infrastructure / chart / service changes that have a runtime in staging, when a reviewer-facing PR needs proof-of-life evidence inline, or when each step of a stacked PR set needs its own apply receipts. Skip for typo fixes, doc-only changes, or pre-bootstrap targets.
+description: Ships an infra or chart change with pre-merge evidence, staging apply plus three-layer proof in the PR. Use for ship with evidence.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   last_verified: "2026-05-18"
   domain_keywords:
     - "vitrine"

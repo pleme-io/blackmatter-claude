@@ -1,9 +1,9 @@
 ---
 name: anomaly-recurrence
-description: Turn opaque recurring errors into structured signal via stable signatures + recurrence counts. Use when the user describes an unclassified error repeating in production, when dashboards need to aggregate "how many times has THIS error happened across pods", or when designing the bridge between unknown-shape errors and the typed audit surface. Closes the known-unknowns axis (sibling of controller-detection-axis + escalation-ladder). Codified in pangea-operator/src/controller/anomaly_tracker.rs.
+description: Turns opaque recurring controller errors into stable signatures and recurrence counts. Use for an unclassified repeating error.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   domain_keywords:
     - "anomaly"
     - "recurrence"

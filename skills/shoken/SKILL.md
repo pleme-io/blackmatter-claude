@@ -1,9 +1,9 @@
 ---
 name: shoken
-description: Verify a repo's first-contact surface — README status line, --help/--version, the install command, and every performance or capability claim — actually matches what the code does. Use before publishing or linking a repo publicly, when a README claim is cited as evidence, when a status ledger says SHIPPED, or on any repo a stranger might land on. Skip for private repos nobody outside the fleet will open.
+description: Checks a repo's README status, --help, --version, install command and claims against the code. Use before publishing a repo.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   last_verified: "2026-08-30"
   domain_keywords:
     - "shoken"

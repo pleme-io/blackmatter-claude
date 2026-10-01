@@ -1,9 +1,9 @@
 ---
 name: controller-detection-axis
-description: Treat any controller bug class — global-state accumulation, ordering-dependent semantics, multiple producers collapsing into one shared collector — as an instance of the Detect → Expose → Visualize → Fix axis. Use when adding preprocessing / DSL / setup steps to a controller, when diagnosing a cryptic downstream error in production, or when designing a new typed signal surface. Codified end-to-end in pangea-ruby-eval (ConflictDetector trait + LoadPathConflictDetector + LoadPathPlanner + ContextWarnings dual surface).
+description: Turns a controller bug class into a typed ConflictDetector plus planner. Use for cryptic recurring controller errors.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   domain_keywords:
     - "controller"
     - "operator"

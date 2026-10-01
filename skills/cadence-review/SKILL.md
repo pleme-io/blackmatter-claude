@@ -1,9 +1,9 @@
 ---
 name: cadence-review
-description: Facilitate or compose a FinOps review packet (weekly team / monthly program / quarterly leadership / annual strategic). Use when running the scheduled review, when adding a new section to a recurring packet, when tuning the cadence of a team's review, or when migrating reviews from manual aggregation to automated forge-tool composition. Powered by the `cadence-forge` Rust binary.
+description: Composes weekly, monthly or quarterly FinOps review packets with cadence-forge. Use for a recurring cost review.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   domain_keywords:
     - "cadence-review"
     - "weekly-review"

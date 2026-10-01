@@ -1,9 +1,9 @@
 ---
 name: service
-description: Manage service lifecycle with forge — release, deploy, migrate, monitor. Use when releasing a service, deploying to staging/production, running migrations, checking deployment health, setting up CI/CD, or configuring deploy.yaml for a new service.
+description: Runs service release, deploy, migrate and verify through forge and deploy.yaml. Use when releasing or deploying a service.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   last_verified: "2026-03-18"
   domain_keywords:
     - "service"

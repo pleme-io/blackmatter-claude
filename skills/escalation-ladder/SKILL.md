@@ -1,9 +1,9 @@
 ---
 name: escalation-ladder
-description: Time-graded recovery escalation for the reconciliation motor — Retry → RefreshSource → ReloadGems → RecycleWorkers → PauseAndAlert as durations grow without reaching Ready. Use when the user describes a recurring failure the motor can't recover from, when asked how the controller should respond when X persists for N minutes, or when designing recovery policy for a new bug class. Fix-axis sibling of controller-detection-axis; codified in pangea-operator/src/controller/escalation.rs.
+description: Applies a time-graded recovery ladder, Retry to PauseAndAlert, to stuck reconcilers. Use when a failure persists for minutes.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   domain_keywords:
     - "escalation"
     - "recovery"

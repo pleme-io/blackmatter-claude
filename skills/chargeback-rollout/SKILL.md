@@ -1,9 +1,9 @@
 ---
 name: chargeback-rollout
-description: Run team-level cost views (showback) and architect the showback→chargeback journey. Use when standing up the weekly team cost-review rhythm, when authoring views for a new team, when investigating a team's cost trend, or when planning the migration from showback (visibility) to chargeback (budget consequence). Powered by the `showback-forge` Rust binary.
+description: Renders team cost views with showback-forge and plans the move to chargeback. Use for team cost trends.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   domain_keywords:
     - "showback"
     - "chargeback"

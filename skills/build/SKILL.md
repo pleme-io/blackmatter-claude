@@ -1,9 +1,9 @@
 ---
 name: build
-description: Build any software project using substrate recipes. Use when creating a new project, adding a build system, scaffolding a repo, or when you need to build something and want to use the right Nix pattern. Always invoked before language-specific skills.
+description: Picks or creates the substrate Nix recipe for a project. Use when scaffolding a repo or adding a build system.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   last_verified: "2026-03-18"
   domain_keywords:
     - "build"

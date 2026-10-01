@@ -1,9 +1,9 @@
 ---
 name: tend
-description: Manage workspace repositories with tend CLI. Use when syncing repos, checking workspace status, discovering org repos, editing workspace config, adding new workspaces, or troubleshooting clone failures (SSH keys, permissions).
+description: "Manages workspace repos with the tend CLI: sync, status, discover, config. Use when syncing org repos or a clone fails."
 allowed-tools: Bash, Read, Write, Edit
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   last_verified: "2026-02-27"
   domain_keywords:
     - "workspace"

@@ -1,9 +1,9 @@
 ---
 name: lifecycle-policy
-description: Author, evaluate, and enforce declarative lifecycle policies (TTL, expiry, storage transitions) across cloud + Kubernetes resources. Use when adding a new lifecycle rule, when a cleanup task gets brought up as recurring work, when policy coverage drops, or when wiring a CI gate that blocks resources without retention coverage. Powered by the `lifecycle-forge` Rust binary.
+description: Authors and enforces TTL, expiry and storage-tier policies with lifecycle-forge. Use for retention or recurring cleanup.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   domain_keywords:
     - "lifecycle"
     - "ttl"

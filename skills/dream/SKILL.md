@@ -1,19 +1,9 @@
 ---
 name: dream
-description: >-
-  Flush agent memory into committed context and leave it at 0 bytes — every
-  memory moves to a git-tracked home (CLAUDE.md, theory, a skill, or the
-  operator's private knowledge base imported by a CLAUDE.md), nothing stays in
-  memory, and nothing becomes unreachable on the way. Use during ANY wait
-  (a build, a workflow, a long agent run) as the standing answer to "what do I do
-  while that runs", and whenever the operator says "dream", "consolidate memory",
-  "refactor memory", "memory is full", "make memory efficient", "throw away the
-  useless ones", or "get some of it out to CLAUDE.md". Also fires when MEMORY.md
-  is near its byte ceiling, when a memory index link is dead, or when you catch
-  yourself shortening index labels to make something fit.
+description: Flushes agent memory into committed git homes until it is 0 bytes. Use during any wait, or on dream, consolidate memory.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "2.0.0"
+  version: "2.0.1"
   last_verified: "2026-10-01"
   domain_keywords:
     - "memory consolidation"
@@ -158,9 +148,9 @@ redundant with their own filename (3,658 bytes) while the shaving campaign on th
 cryptic ones recovered ~1,300. **Fix a ceiling by promoting and retiring.**
 
 **2. Never read "unreachable" as "low value".** It almost always means the index
-hit its ceiling. The 2026-09-17 pass found three top-priority disclosure rules
-unreachable from both indexes — rules governing what may appear on
-customer-facing artifacts, invisible to every session.
+hit its ceiling. The 2026-09-17 pass found three of the operator's
+highest-priority rules unreachable from both indexes, invisible to every
+session.
 
 **3. One lost character can strand a hundred memories.** That same corpus had
 `[INDEX-FULLmd](INDEX-FULLmd)` in the header — a dot lost to an earlier shave —

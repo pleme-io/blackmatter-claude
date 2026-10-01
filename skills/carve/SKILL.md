@@ -1,9 +1,9 @@
 ---
 name: carve
-description: Take a single monolithic feature branch and split it into a stack of scope-aligned pull requests the team can actually review. Scopes are JIRA-optional — a scope may be a tracker ticket, a pure architectural layer (offline, no ticket), or a discrete change. Use when the operator has been developing freely in one branch and now needs to present that work back as a reviewable stack, when a PR is too large for review and needs decomposing along ticket or layer lines, or when restacking descendant PRs after a review-feedback fix landed on a parent. Skip for single-scope branches, doc-only branches, or branches with fewer than 3 commits.
+description: Splits a monolithic branch into a proven stack of scope-aligned PRs. Use for carve, split this PR, restack.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
   last_verified: "2026-06-08"
   domain_keywords:
     - "carve"
