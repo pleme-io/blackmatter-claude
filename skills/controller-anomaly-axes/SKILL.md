@@ -40,7 +40,7 @@ axis. All three emit the same typed `Conflict` shape, so every audit consumer
 (tracing, `.status.anomalies[]`, k8s Events, Prometheus, GraphQL) reads one
 schema whichever axis fired. Until 2026-10-01 each axis was its own skill
 (`controller-detection-axis`, `anomaly-recurrence`, `escalation-ladder`); each
-is kept whole below as one section.
+is kept below as one section, with its detail in `references/`.
 
 ## The three axes
 
@@ -66,8 +66,6 @@ signature for compat; whatever neither axis classifies is still bounded by time
 ---
 
 ## Axis 1 — known knowns: the detection axis
-
-> Until 2026-10-01 the standalone skill `controller-detection-axis` (version 0.1.1): Turns a controller bug class into a typed ConflictDetector plus planner. Use for cryptic recurring controller errors. Original title: *controller-detection-axis — The four-step bug-class loop*.
 
 Every preprocessing / DSL / setup step in a controller is a candidate for a **bug class**: an entire family of cryptic downstream errors that share a structural cause. This skill names the pattern that turns each bug class into a controlled four-step loop and gives you the apply-or-skip checklist + concrete plumbing recipes.
 
@@ -98,122 +96,7 @@ Apply the axis when the controller adds a step with ANY of these smells:
 
 If NONE apply, the preprocessing is scalar; the axis is overhead, skip it.
 
-### The fundamental shape (Rust)
-
-The codified primitives live in `pangea-operator/pangea-ruby-eval/src/evaluator.rs` (repo / crate / path):
-
-```rust
-// 1. The detector trait (open for new bug classes).
-pub trait ConflictDetector: Send + Sync {
-    fn name(&self) -> &'static str;
-    fn detect(&self, ctx: &CompileContext, existing_load_path: &[PathBuf])
-        -> Vec<Conflict>;
-}
-
-// 2. The typed shape every detector emits.
-pub struct Conflict {
-    pub detector: &'static str,           // metric/event label
-    pub category: String,                 // the subject (logical name)
-    pub message: String,                  // human-readable
-    pub evidence: serde_json::Value,      // structured for sinks
-}
-
-// 3. The audit container (dual-surface: text + typed).
-pub struct ContextWarnings {
-    pub messages: Vec<String>,    // flat for tracing + legacy
-    pub conflicts: Vec<Conflict>, // typed for status/events/GraphQL
-}
-```
-
-Mirror this shape verbatim for new detectors in adjacent crates — the consumers stay simple because every detector speaks one schema.
-
-### Recipe — adding a new detector
-
-#### Step 1: Define the detector struct
-
-```rust
-pub struct <BugClass>Detector { /* config fields */ }
-
-impl <BugClass>Detector {
-    pub fn <reasonable_default>() -> Self { Self { /* ... */ } }
-}
-
-impl ConflictDetector for <BugClass>Detector {
-    fn name(&self) -> &'static str { "<bug_class>" }
-    fn detect(&self, ctx: &CompileContext, existing: &[PathBuf]) -> Vec<Conflict> {
-        // Pure scan. No mutation of Ruby state, no I/O beyond inputs.
-        // Each finding → one Conflict with detector="<bug_class>".
-    }
-}
-```
-
-`<bug_class>` is the stable label that appears in tracing + status + metric labels. Pick once, never change.
-
-#### Step 2: Register in default detector set
-
-In `CompileContext::default_detectors()`:
-
-```rust
-pub fn default_detectors() -> Vec<Box<dyn ConflictDetector>> {
-    vec![
-        Box::new(LoadPathConflictDetector::pangea()),
-        Box::new(<BugClass>Detector::reasonable_default()),  // ← add
-    ]
-}
-```
-
-For per-CR custom detector sets, pass via `compile_in_context_with_detectors` instead.
-
-#### Step 3: Pure unit tests
-
-```rust
-#[test]
-fn detects_<bug_class>_when_<condition>() {
-    // TempDir + filesystem layout + assert.
-    // No Ruby needed — detector is pure.
-}
-```
-
-#### Step 4: (Slice 4) wire the structured surface
-
-When slice 4 lands `.status.anomalies[]`:
-
-* CRD `InfrastructureTemplateStatus.anomalies: Option<Vec<Anomaly>>` where `Anomaly` is the on-wire shape of `Conflict`.
-* `pangea-operator/pangea-operator/src/controller/template/status.rs` carries `ContextWarnings.conflicts` → `status.anomalies`.
-* k8s `Event` with `reason = c.detector`, `message = c.message`, fingerprint by `(template, c.detector, c.category)` for deduplication.
-* Prometheus `pangea_compile_conflicts_total{detector="<bug_class>"}`.
-
-#### Step 5: The fix step — planner at the right layer
-
-The detector NAMES the bug class; the planner ELIMINATES it. The planner pattern (see `plan_load_paths` for the canonical example):
-
-```rust
-// Inputs labeled by source — caller knows the shape.
-pub enum <Surface>Source { /* tiers */ }
-pub struct <Surface>Entry { /* path + source */ }
-
-// Pure planner — labels in, plan out.
-pub fn plan_<surface>(entries: &[<Surface>Entry], cfg: &Config) -> <Surface>Plan;
-
-// Manifest from plan — drops hardcoded values in the controller.
-impl CompileContext { pub fn from_plan(plan: &<Surface>Plan) -> Self; }
-```
-
-The planner is pure. The controller layer labels inputs by source. The manifest applies the plan transactionally. Hardcoded values in the controller (the `"/var/pangea/gems/pangea-architectures-main/"` purge prefix in `owner.rs`) become derivable — adding a new producer doesn't need an edit.
-
-### The case study (load-path double load — codified 2026-05-28)
-
-**Symptom**: `pleme-io-opensource` stuck at `Compiling` with `consecutiveCompileFailures: 104`. Error: `Attribute :cluster_name has already been defined`.
-
-**Detect**: `LoadPathConflictDetector` walks every `.rb` file under each `$LOAD_PATH` entry × `["pangea/"]`; groups by logical require name; flags any name with >1 absolute path. O(L × F), ~µs warm cache.
-
-**Expose**: `compile_in_context` runs the detector → `ContextWarnings.conflicts`. `owner.rs::execute_compile` emits `tracing::warn!(template, warning, "compile-context warning")` per message.
-
-**Visualize**: deployed 2026-05-28 — every shadowed file appeared as one structured log line naming workspace + logical path + winner + shadowed paths. Diagnosis time: hours → seconds.
-
-**Fix**: `LoadPathPlanner` consumes `LoadPathEntry { path, source: WorkspaceRepo | GemBroadcast { gem_name } | Other }`, derives install order (workspace > gem > other) + purge_feature_prefixes from overlap detection. `CompileContext::from_plan(&plan)` builds the manifest. owner.rs's hardcoded purge prefix becomes derivable.
-
-The detector now functions as the regression test: any new gem broadcast site that introduces a logical conflict trips it on day 1.
+The Rust shape every detector mirrors, the step-by-step recipe for adding one, the load-path double-load case study, the anti-patterns to flag and the related notes: `references/detection-axis.md`.
 
 ### Workflow when invoking this skill
 
@@ -236,46 +119,9 @@ When the user describes a new preprocessing / DSL / setup step OR a cryptic down
 
 7. **Commit boundary**: detector + tests is one commit. Planner is one commit. Wire-up in owner.rs is one commit. Each lands independently.
 
-### Anti-patterns to flag
-
-| Anti-pattern | Why bad | Right move |
-|---|---|---|
-| Detector that mutates state | Not pure; can't run in plan context; can't run in tests | Pure scan only. State mutation belongs in apply step. |
-| Hardcoded path/value in controller "to fix" the detected condition | Hardcoded values are anti-derivation; new producers force an edit | Planner with labeled-source inputs derives the value. |
-| New ad-hoc warning type per bug class | Sinks (status, events, metrics) branch on shape | One `Conflict` shape; `detector` field labels the bug class. |
-| Detector emits when EVERYTHING is fine (just to "log progress") | Drowns the signal | Detector emits ONLY when conflict found; empty Vec means clean. |
-| Detector that lives in the controller layer | Couples the bug class to the controller; can't reuse from other entrypoints | Detector belongs in `pangea-ruby-eval` (or appropriate primitive crate). |
-| Wiring fix into `status.anomalies[]` BEFORE the slice-4 CRD change | Type churn across the schema | Wait for slice 4 schema; until then, `tracing::warn!` is the audit surface. |
-
-### Related knowledge notes
-
-In the operator's private knowledge base (found by filename; they were agent
-memories until 2026-10-01):
-
-* `project_controller_detection_axis.md` — the durable note.
-* `project_compile_isolation_shield.md` — the `CompileContext` primitive the detector hangs off.
-* `project_ruby_pool_double_load_fix.md` — the bug class that drove the codification.
-* `project_operator_observability_backlog.md` — the slice-4 status/events/metrics consumers.
-
-### Triggers
-
-Invoke when:
-- User adds a new preprocessing or DSL or setup step in pangea-operator (or any similar controller).
-- A cryptic downstream error surfaces in production and the root cause is structural (multiple producers, ordering, global state).
-- Designing a new typed signal surface (metrics, events, status fields, GraphQL subs).
-- Asked "how do we detect / surface / fix the X bug class?".
-
-DO NOT invoke for:
-- Single-shot bug fixes with no recurrence risk.
-- Pure I/O bugs (network, disk).
-- UI-only concerns.
-- Bug classes that already have a working detector — improve it in place, don't re-codify the axis.
-
 ---
 
 ## Axis 2 — known unknowns: the recurrence axis
-
-> Until 2026-10-01 the standalone skill `anomaly-recurrence` (version 0.1.1): Turns opaque recurring controller errors into stable signatures and recurrence counts. Use for an unclassified repeating error. Original title: *anomaly-recurrence — Known unknowns made structured*.
 
 The third axis of controller anomaly handling. The detection axis names KNOWN bug classes; the escalation ladder gates ALL unknowns by time. This skill is the middle layer: errors the controller can't classify still become structured signal via stable signatures + recurrence counts.
 
@@ -291,37 +137,6 @@ The composition table that defines all three axes is at the top of this skill (�
 | Bridging an unclassified error to the typed audit surface | Yes. |
 | Bug class is named (typed detector exists) | No — promote to typed detector (see Axis 1 — detection, above). |
 | Single-shot error you'll never see again | No — overhead for no gain. |
-
-### API (pangea-operator/pangea-operator/src/controller/anomaly_tracker.rs)
-
-```rust
-// Pure: strip variable parts + BLAKE3 hash. 12 hex chars.
-pub fn error_signature(err_msg: &str) -> String;
-
-// Inspectable canonical-form derivation (for tests + debugging).
-pub fn strip_variable_parts(err_msg: &str) -> String;
-
-pub trait RecurrenceObserver: Send + Sync {
-    fn observe(&self, key: &str, signature: &str) -> Recurrence;
-    fn peek(&self, key: &str, signature: &str) -> Option<Recurrence>;
-}
-
-pub struct Recurrence { signature, count: u32, age: Duration }
-pub struct InMemoryRecurrenceTracker { /* per-process */ }
-```
-
-14 unit tests. Pure (no async / no I/O / no global state).
-
-### Strip rules
-
-| Variable part | Pattern | Placeholder |
-|---|---|---|
-| Nix-store hash | `/nix/store/<32-base32>-<name>` | `/nix/store/<HASH>` |
-| Workspace path | `/var/pangea/workspaces/<name>/…` | `/var/pangea/workspaces/<NAME>` |
-| Gem cache path | `/var/pangea/gems/<name>-<ref>/…` | `/var/pangea/gems/<GEM>` |
-| Hex address | `0x<hex>` | `0x<HEX>` |
-
-What's preserved: module names, error verbs, logical Ruby require paths.
 
 ### Wire-in recipe
 
@@ -341,12 +156,6 @@ tracing::info!(
 
 ControllerState carries `anomaly_tracker: Arc<dyn RecurrenceObserver>`; default impl `InMemoryRecurrenceTracker` is per-process; slice-N swaps for sqlx-backed at the trait boundary.
 
-### Wire-out (slice-4+)
-
-* `.status.anomalies[].signature` — surface the recurrence shape in CRD status.
-* `pangea_anomaly_recurrences_total{namespace, name, signature}` counter.
-* `Conflict { detector: "anomaly_recurrence", category: signature, evidence: { count, age_s } }` — joins the typed audit stream.
-
 ### Promotion path: known unknown → known known
 
 When a recurring unknown signature shows a pattern, the upgrade is:
@@ -357,22 +166,6 @@ When a recurring unknown signature shows a pattern, the upgrade is:
 
 This is the FEEDBACK LOOP: opaque-recurring → named-recurring → typed-detected.
 
-### Anti-patterns to flag
-
-| Anti-pattern | Why bad | Right move |
-|---|---|---|
-| Skipping signature, just emitting raw error string | Dashboards can't aggregate | Always signature first |
-| Using `format!("{:?}", err)` as the signature input | Includes addresses / unstable Display | Use the err's `Display`/`to_string()`; strip step handles paths |
-| Re-implementing strip rules per call site | Drift across audit sites | Single source: `error_signature` in `anomaly_tracker` |
-| Persisting raw error strings in metric labels | Cardinality explosion | Signature → bounded label cardinality |
-| Per-template global locks for recurrence | Contention | Per-(key, signature) entry; `Mutex<HashMap>` is fine |
-| Adding `&mut self` to the trait | Forces callers to own a write-locked tracker | `&self` + interior Mutex; lets ControllerState hold `Arc<dyn …>` |
-
-### Composes with
-
-* **Axis 1 (detection)** — the typed-detector axis; signature → bug class promotion path.
-* **Axis 3 (escalation ladder)** — TIME-gated actions; recurrence count is the COMPLEMENTARY signal.
-
 ### Workflow when invoking
 
 1. **Identify the failure site** — wherever the controller catches an Err and bails.
@@ -381,33 +174,11 @@ This is the FEEDBACK LOOP: opaque-recurring → named-recurring → typed-detect
 4. **(Slice-4) wire to status** — feed Recurrence into `Conflict.evidence`.
 5. **Tune strip rules** — if the canonical form is still too granular for production errors, add a strip rule (file `strip_variable_parts` in anomaly_tracker.rs, add a unit test).
 
-### Related knowledge notes
-
-In the operator's private knowledge base (found by filename; they were agent
-memories until 2026-10-01):
-
-* `project_anomaly_recurrence.md` — durable knowledge.
-* `project_controller_detection_axis.md` — sibling typed-detector axis.
-* `project_escalation_ladder.md` — sibling time-gated axis.
-
-### Triggers
-
-Invoke when:
-- User describes a recurring opaque error in production.
-- Adding a new error-handling arm.
-- Dashboards need cross-pod aggregation of error types.
-- Designing the bridge between unstructured errors and the typed audit surface.
-
-DO NOT invoke for:
-- Single-shot errors with no recurrence risk.
-- Errors already covered by a typed `ConflictDetector`.
-- Errors where the bug class is structurally fixable (just fix it).
+The `error_signature` API, the strip rules, the slice-4 wire-out, the anti-patterns to flag and the related notes: `references/recurrence-axis.md`.
 
 ---
 
 ## Axis 3 — unknown unknowns: the escalation ladder
-
-> Until 2026-10-01 the standalone skill `escalation-ladder` (version 0.1.1): Applies a time-graded recovery ladder, Retry to PauseAndAlert, to stuck reconcilers. Use when a failure persists for minutes. Original title: *escalation-ladder — Time-graded recovery*.
 
 The reconciliation motor needs progressively deeper corrective actions when a template can't reach Ready. This skill names the pattern, the production-default ladder, and the wire-in shape so any new failure surface gets recovery semantics by default.
 
@@ -433,102 +204,6 @@ Each action is **idempotent**. Each label is **stable** (locked by test). `depth
 | A one-shot bug fix | No | The ladder is overhead — fix it and move on. |
 | Errors fixed by configuration retry alone | No | settlingPolicy + retryPolicy handle that; the ladder is for time-graded depth. |
 
-### Two classes covered
-
-* **Known knowns** — typed `Conflict` from a detector named the bug class. Ladder picks action proportional to persistence.
-* **Known unknowns / unknown unknowns** — controller saw an error it can't classify. Ladder still applies because the gate is TIME, not error shape. Rung 4 forces human attention before infinite cycle waste.
-
-### Codified API
-
-`pangea-operator/pangea-operator/src/controller/escalation.rs` (repo / crate / path):
-
-```rust
-pub enum EscalationAction { Retry, RefreshSource, ReloadGems, RecycleWorkers, PauseAndAlert }
-impl EscalationAction { fn label(&self) -> &'static str; fn depth(&self) -> u8; }
-
-pub struct EscalationRung { pub min_duration_unready: Duration, pub action: EscalationAction }
-pub struct EscalationLadder { /* sorted Vec<EscalationRung> */ }
-impl EscalationLadder {
-    pub fn pangea_default() -> Self;
-    pub fn from_rungs(rungs: Vec<EscalationRung>) -> Self;       // sort-on-construct
-    pub fn pick(&self, duration_unready: Duration) -> EscalationAction;
-    pub fn rungs(&self) -> &[EscalationRung];
-}
-```
-
-7 unit tests pass. PURE — no async, no I/O, no global state.
-
-### Wire-in recipe
-
-Call from any controller arm that handles a failure. The minimum useful wire is **surface-only** (log + status), valuable immediately even before action handlers ship:
-
-```rust
-let now = chrono::Utc::now();
-let duration_unready = template.status.as_ref()
-    .and_then(|s| s.phase_entered_at.as_ref())
-    .map(|t| (now - *t).to_std().unwrap_or(Duration::ZERO))
-    .unwrap_or(Duration::ZERO);
-let action = EscalationLadder::pangea_default().pick(duration_unready);
-
-tracing::info!(
-    template = %name,
-    duration_unready_s = duration_unready.as_secs(),
-    recommended_action = action.label(),
-    depth = action.depth(),
-    "escalation ladder recommendation"
-);
-
-// Bake into lastError / Event message:
-let msg = format!(
-    "{} (recovery ladder recommends '{}' at depth {}, {}s unready)",
-    original_msg, action.label(), action.depth(), duration_unready.as_secs(),
-);
-```
-
-Then a slice-5 follow-up wires the action handlers:
-
-```rust
-match action {
-    Retry => { /* no extra */ }
-    RefreshSource => invalidate_workspace_cache(&template).await?,
-    ReloadGems => state.compiler_backend.reload_all_gems().await?,
-    RecycleWorkers => state.ruby_pool.recycle_all().await?,
-    PauseAndAlert => set_autosuspended_with_event(&template, &state).await?,
-}
-```
-
-Each handler is its own primitive — add one variant at a time. The ladder doesn't block on handlers being present.
-
-### Anti-patterns to flag
-
-| Anti-pattern | Why bad | Right move |
-|---|---|---|
-| Hard-coding the actions in the controller arm | Doesn't compose; new arms duplicate the logic | Use the `EscalationLadder` primitive everywhere |
-| Skipping `pause_and_alert` because "we should always retry" | Burns cycles forever on unrecoverable conditions | The deepest rung exists exactly for unknown-unknowns |
-| Using cycle-count instead of duration | Doesn't honor "long enough to act" semantics | `Duration::from_secs(...)` is the gate; cycle-count is the orthogonal `settlingPolicy` signal |
-| Making the action non-idempotent | Hazardous if rung fires twice across restarts | Every action MUST be idempotent (test it) |
-| Surfacing the action only in logs (no status) | Operators can't see it via kubectl | Bake into `status.lastError` text + emit Event |
-
-### Per-CR override (future / slice 4)
-
-`spec.recoveryPolicy.rungs[]` lets a template override the default ladder. Production-aggressive workspaces shorten timings; production-tolerant lengthen. `from_rungs(...)` sorts on construction so CR ordering doesn't matter.
-
-```yaml
-spec:
-  recoveryPolicy:
-    rungs:
-      - afterSeconds: 60
-        action: RefreshSource
-      - afterSeconds: 600
-        action: PauseAndAlert
-```
-
-### Composes with
-
-* **Axis 1 (detection)** — the detection axis NAMES the anomaly via `ConflictDetector`; this skill TAKES ACTION over time. Same `Conflict` shape, different axis.
-* `pangea-operator/pangea-operator/src/controller/settling.rs` — provides stuck signals (cycle-count + fingerprint). Orthogonal to time-graded depth.
-* `pangea-operator/pangea-operator/src/controller/error_policy.rs` — categorizes errors. Pre-step to the ladder.
-
 ### Workflow when invoking
 
 1. **Smell-check**: does the failure recur, with no scalar fix? If yes, ladder applies.
@@ -537,25 +212,12 @@ spec:
 4. **Surface-first**: log + status + Event. Handlers later.
 5. **Pure tests**: TempDir-free; just `Duration::from_secs(...)` inputs and `EscalationAction` assertions.
 
-### Related knowledge notes
+The codified `EscalationLadder` API, the surface-only and action-handler wire-in, the per-CR `recoveryPolicy` override, the anti-patterns to flag and the related notes: `references/escalation-ladder.md`.
 
-In the operator's private knowledge base (found by filename; they were agent
-memories until 2026-10-01):
+---
 
-* `project_escalation_ladder.md` — durable knowledge.
-* `project_controller_detection_axis.md` — the detect sibling axis.
-* `project_operator_observability_backlog.md` — slice-4 status field consumer.
+## References
 
-### Triggers
-
-Invoke when:
-- User describes a recurring failure the motor can't recover from.
-- User asks "how should the controller respond when X persists for N minutes".
-- Adding a new failure-handling arm to a controller.
-- Designing recovery policy for a new bug class.
-- A template is stuck at a non-Ready phase with high consecutive failure counts.
-
-DO NOT invoke for:
-- One-shot bug fixes.
-- Bugs already handled by settlingPolicy + retryPolicy alone.
-- Bugs where the structural fix is obvious + immediate (just fix it).
+- `references/detection-axis.md`: axis 1, writing a new `ConflictDetector` or planner; the Rust primitives, the recipe, the 2026-05-28 load-path case study, anti-patterns, triggers
+- `references/recurrence-axis.md`: axis 2, the `anomaly_tracker` API and strip rules, wiring recurrence into status/metrics, anti-patterns, triggers
+- `references/escalation-ladder.md`: axis 3, the `escalation.rs` API, wiring the ladder and its action handlers into a failure arm, per-CR overrides, anti-patterns, triggers

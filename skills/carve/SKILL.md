@@ -244,64 +244,14 @@ resumable:
 carve execute -p plan.yaml --resume     # skip steps already Done
 ```
 
-## Step 7 — Recover (clean undo)
+## Steps 7–10 — after execute
 
-```bash
-carve recover -p plan.yaml
-```
+- **Recover (clean undo):** `carve recover -p plan.yaml` deletes exactly the branches carve created (never the source) and restores HEAD.
+- **Tracker sync** (ticket-backed scopes only): `carve jira-sync -p plan.yaml`; layer-only scopes are skipped.
+- **Restack on review feedback:** `carve restack --from <parent-branch>`, then `carve diagram -p plan.yaml`, then push with `--force-with-lease`.
+- **Gate (CI hook):** `carve gate --pr <n> -p plan.yaml` fails while any parent PR is still open.
 
-Reads `.carve/recovery-<hash>.yaml`, deletes exactly the branches carve
-created (never the source), restores HEAD to the original branch, and
-re-hashes the backup tag to confirm no drift. Refuses on a dirty tree
-(commit/stash first) and on a plan-hash mismatch (override with `--force`).
-Use `--latest` or `--manifest <path>` to target a specific run, and
-`--prune-journal` to also clear the journal + carve refs.
-
-(The legacy manual recovery still works too:
-`git checkout carve-backup/<...>` then `git branch -f <source-branch>`.)
-
-## Step 8 — Tracker sync (ticket-backed scopes only)
-
-```bash
-carve jira-sync -p plan.yaml
-```
-
-For each ticket-backed scope with `story_points` / `target_status`, carve
-writes the field and transitions the issue — capped by
-`max_auto_transition` in `.carve.toml`. **Layer-only scopes carry no
-ticket, so jira-sync skips them entirely.**
-
-A ticket carve creates or syncs is still a ticket, so it carries the full
-field set — assignee, sprint, labels, points, parent — not just the two
-fields jira-sync writes. The ticket-flow skill owns that standard; check the
-synced issues against it rather than leaving a half-populated ticket on the
-board. If the team's workflow forbids
-automation past an early state, set:
-
-```toml
-[jira]
-max_auto_transition = "Ready To Work"
-```
-
-## Step 9 — Restack on review feedback
-
-```bash
-carve restack --from <branch-of-the-parent>   # rebase --onto every descendant
-carve diagram -p plan.yaml                     # refresh embedded PR diagrams
-git push --force-with-lease origin <descendant-branches...>
-```
-
-The tree-hash gate applies to restack too — a restack that would drop
-content refuses.
-
-## Step 10 — Gate (CI hook)
-
-```yaml
-- name: Refuse out-of-order stack merge
-  run: carve gate --pr ${{ github.event.pull_request.number }} -p plan.yaml
-```
-
-Fails if any parent PR in the stack is still open.
+Flags, refusals, the ticket field standard and the CI step: `references/after-execute.md`.
 
 ## Sidecar state
 
@@ -312,17 +262,7 @@ artifacts to commit).
 
 ## Pitfalls to surface to the operator
 
-| Pitfall | What to say |
-| --- | --- |
-| `prove` says NOT equivalent | A by-commit node has an empty commit range. Run `carve plan --refresh` after editing globs. |
-| `preflight` flags uncovered paths in net-diff mode | Glob-vs-concrete-path comparison; pass `--allow-overlap`. Real overlaps still refuse. |
-| `--epic` required error | You are online. Pass `--offline`, `--scopes-from`, or `--layer` to author scopes inline. |
-| Working tree dirty | Carve refuses to start (and recover refuses). Commit or stash first. |
-| `master` ref stale in worktree | Carve auto-detects via `origin/HEAD`. Use `--fetch` to root the stack on the *current* remote tip. |
-| Cross-cutting commit not flagged | Globs too broad/narrow. Tighten and `carve plan --refresh`. |
-| Tree-hash gate FAILED at execute | The equivalence ledger didn't seal. Run `carve prove` and fix before executing. |
-| Existing branch collision | Pass `--force` to recreate, or delete the stale branch. |
-| Tracker/`gh` not authenticated | `gh auth status` must succeed before a pushing execute; tracker env only matters for ticket-backed scopes. |
+Symptom → what to tell the operator (prove NOT equivalent, preflight overlap in net-diff mode, `--epic` required, dirty tree, stale `master`, tree-hash gate failure, branch collision, `gh` auth): `references/pitfalls.md`.
 
 ## Anti-patterns to refuse
 
@@ -336,9 +276,8 @@ artifacts to commit).
 - **Don't push with bare `--force`.** Carve always uses
   `--force-with-lease`; mirror that during manual recovery.
 
-## Family
+## References
 
-- **vitrine** — what each carved PR uses to embed pre-merge evidence into
-  its description before review.
-- **cordel** — the BLAKE3-attestation pattern carve borrows for backup tags.
-- **shikumi** — the typed-config pattern carve borrows for per-org policy.
+- `references/after-execute.md`: steps 7–10 in full, to undo a carve or act after the PRs open
+- `references/pitfalls.md`: the full table, when a carve command refuses or surprises
+- `references/family.md`: sibling tools and skills (vitrine, cordel, shikumi)

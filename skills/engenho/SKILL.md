@@ -40,15 +40,7 @@ Kubernetes (and Nomad, and PureRaft) distribution. One design, three axes:
   wasm / static binary / helm chart), and distributes it after a K-of-N
   independent-rebuild quorum.
 
-> **★ STATUS, RE-MEASURED 2026-08-30 — the previous note here was FALSE and had
-> been for months.** It read: *"the `engenho` binary is an M0.0 placeholder; the
-> real cluster today is k3s, managed by kikai."* Both halves are wrong now.
->
-> engenho runs the local cluster **natively, on macOS baremetal** — no VM, no
-> k3s, no kikai in the path. Measured today: a launchd daemon
-> (`io.pleme.engenho.daemon`) serving `:6443` (`readyz` 200, reports `v1.34.0`,
-> `compiler: rustc`) and `:10250`, enforcing RBAC, across **18 API groups plus
-> core v1**. 27 crates, ~185k lines, **3,512 tests**.
+> **★ STATUS, RE-MEASURED 2026-08-30:** engenho runs the local cluster natively on macOS, with no VM, k3s or kikai in the path. The measurement, and the false note it replaced: `references/status-2026-08-30.md`.
 >
 > **kikai is a k3s VM orchestrator and is NOT engenho.** Pointing kikai's lens
 > at engenho reports a healthy cluster as down. Use `banken` or `kubectl` with
@@ -65,25 +57,9 @@ Kubernetes (and Nomad, and PureRaft) distribution. One design, three axes:
 > is accumulated convention, and the payoff is testing / simulation / embedding
 > — with each claim measured or sourced.
 
-## Repos
-
-| Repo | Role |
-|---|---|
-| `pleme-io/engenho` | the 20-crate runtime workspace |
-| cluster lifecycle backend (private) | k3s VMs via QEMU/kasou |
-| Viggy target controllers (private) | SLA/CostBudget/Compliance/CustomerKpi/Security + the image-validation platform |
-| the engenho doc in the operator's private theory repo | canonical destination doc (CSE) |
-
 ## Authoritative docs (read these first)
 
-- `engenho/docs/FLEET-DESIGN.md` — the whole design: engenho on every node, every state class recoverable, one multi-raft engine, fenced role leases and a moving control plane, capability-inferred placement, movement, allocation, per-release API faces, the node as a release, and the build order (rungs R0–R8). Read it before any distributed, placement or GitOps work
-- `engenho/docs/RECOVERABLE-STATE.md` — the consensus seals (durable votes, quorum-gated promotion, fencing) and their tiers
-- `engenho/docs/STRATEGY.md` — invariants + action taxonomy + phase spine
-- `engenho/docs/CONTROL-PLANE.md` — managing a running daemon: lifecycle, socket + remote trust, overrides, children, re-initialization, MCP
-- `engenho/docs/STATE-MACHINES.md` — the 13-machine catalog (states/events/transitions/source); ⑬ is the daemon lifecycle
-- `engenho/docs/TYPESCAPE.md` — the typed universe by domain + the sui bridge
-- `engenho/docs/{DISTRIBUTED,FABRIC,CONSISTENCY-FABRIC,MANY-FACES,RESILIENCE,LEAN}.md`
-- the engenho theory doc (private theory repo) — destination, wire-compat contract, phases (§I–§XII)
+`pleme-io/engenho` is the runtime workspace; the private repos around it, and the full doc list with what each covers: `references/repos-and-docs.md`. Start with `engenho/docs/FLEET-DESIGN.md` (before any distributed, placement or GitOps work), `CONTROL-PLANE.md` (a running daemon) and `STATE-MACHINES.md` (a state machine).
 
 ## Managing the running daemon (control plane — NOT the Kubernetes API)
 
@@ -94,18 +70,7 @@ itself — nothing about it is a Kubernetes object. Spec:
 `engenho/spec/engenho-control.openapi.yaml`; every operation is one
 `engenho ctl <resource> <verb>`:
 
-| Want | Command |
-|---|---|
-| Is it up, and where in its lifecycle? | `engenho ctl runtime show` (`running` / `failed{phase, retry}` / `stopped` / `wedged`) |
-| Why did a boot fail? | `engenho ctl boot show` · `boot attempts` (per-phase journal) |
-| PKI, store, identity, data-dir layout | `engenho ctl init show` · `pki show` · `store show` |
-| Change config while it runs | `engenho ctl config set <leaf> --value <v>` (persisted override; `--persist false` for memory only) · `config unset` · `config clear` · `config drift` (what overrides shadow in the declared file) |
-| Leaf classes | `engenho ctl config leaves` — `live` (applied now), `respawn` (children moved now), `restart_runtime` (deferred unless `--restart-policy now`), `next_boot`, `not_overridable` |
-| Children (drivers, listeners, lease) | `engenho ctl children list` · `children restart <child>` · `children enable\|disable <driver>` |
-| Stop / start / restart / retry / exit | `engenho ctl runtime stop\|start\|restart\|retry\|exit` (the process stays up when the runtime stops) |
-| What happened | `engenho ctl events list` · `logs list` · `audit list` (BLAKE3-chained) |
-| Destructive re-init | `engenho ctl reinit rotate-admin-token\|reseed-pki\|wipe-store`, `control rotate-identity` — a confirmation handshake (type the cluster's name; `--confirm-phrase` off a terminal); replaced files go to `data_dir/control/attic/`, never deleted |
-| Another machine | `engenho ctl --remote <name> …` (`~/.config/engenho/remotes.yaml`; `engenho remote keygen <name>` makes this machine's key, whose pin the server must list) |
+Every resource and verb (`runtime`, `boot`, `init`/`pki`/`store`, `config` and its leaf classes, `children`, `events`/`logs`/`audit`, the destructive `reinit`, `--remote`): `references/control-plane.md`.
 
 Authority is the kernel's (socket peer uid; group members get `groupTier`) or
 the pin's tier, capped by `--ceiling`. Exit codes: 0 answered, 2 usage, 3
@@ -118,53 +83,9 @@ operation from the same catalog. Observe tier only unless the server was
 launched with `--allow-mutate`; destructive operations are never tools. The
 daemon caps every call at that tier and audits it as `agent`.
 
-## Reading live cluster state (engenho MCP)
+## Reading live cluster state, and the kikai lifecycle
 
-The `cluster_*` tools are a **read-only** typed reader over kikai's on-disk state
-and the live Kubernetes API (Kubernetes writes are P2, gated on saguão
-authority). They take `{ "cluster": "<name>" }` from kikai's `clusters.yaml`.
-Discover clusters first:
-
-```bash
-ls ~/.local/share/kikai        # registered clusters with on-disk state
-cat ~/.config/kikai/clusters.yaml 2>/dev/null   # cluster config (cpus/mem/ports)
-```
-
-| Tool | Use |
-|---|---|
-| `mcp__engenho__cluster_status` | Agent/VM/API/Snapshot rows (sub-50ms, no kubectl) |
-| `mcp__engenho__cluster_config` | typed config view (CPUs, memory, gitops, network) |
-| `mcp__engenho__cluster_kubeconfig` | kubeconfig descriptor |
-| `mcp__engenho__cluster_snapshot_meta` | auto-snapshot meta + store-path liveness |
-| `mcp__engenho__cluster_pods` | typed Pod list (through the engenho-types catalog) |
-| `mcp__engenho__cluster_resource_list` | generic typed list: `{cluster, kind, namespace, label_selector, field_selector}` — kind ∈ pod/service/config_map/secret(redacted)/service_account/endpoints/persistent_volume_claim/namespace/node/deployment/replica_set/role/role_binding |
-| `mcp__engenho__cluster_resource_get` | generic typed get |
-
-Secrets are **redacted at the MCP boundary** by type — never expect plaintext.
-
-## kikai cluster lifecycle
-
-`kikai` drives the 14-state cluster FSM (its `state.rs`, exhaustively
-proptested). Subcommands (run from a cluster's nix dir; prefer the user runs
-interactive ones via `! kikai …`):
-
-| Command | Effect / FSM event |
-|---|---|
-| `kikai init --cluster <c>` | generate bootstrap secrets + TLS bag → `Initialized` |
-| `kikai up` | build image, create disks, launch VM, wait health → `…→ Healthy` |
-| `kikai status` | aggregate health (VM/API/node/Flux/pods) |
-| `kikai down` | graceful shutdown → `Stopped` |
-| `kikai destroy` | stop + remove disks (optionally secrets) → `Destroyed` |
-| `kikai daemon` | continuous monitor + auto-restart (`Healthy ⇄ Degraded`) |
-| `kikai pause` / `resume` | VZ freeze ↔ thaw |
-| `kikai snapshot` | save VM state (from `Paused`) |
-| `kikai dump-config` | print effective `ClusterConfig` as JSON |
-
-Lifecycle FSM (the never-stuck spine): `Uninitialized → Initialized → DisksReady
-→ WaitingForApi → WaitingForNode → WaitingForFlux → Healthy ⇄ Degraded`, plus
-`Paused / ShuttingDown / Stopped / SavingSnapshot / RestoringSnapshot /
-Destroyed` and the terminal `BlockedDeclarative` (broken declaration — needs
-operator action, not retry).
+The `cluster_*` MCP tools are a read-only typed reader over kikai's on-disk state and the live Kubernetes API; secrets are redacted at the MCP boundary. The tool table: `references/cluster-reader.md`. kikai's subcommands and its 14-state FSM: `references/kikai.md`.
 
 ## ★ The contract ring — and the ONE rule for touching it
 
@@ -172,41 +93,9 @@ engenho's value is not its API; it is the ring of contracts AROUND the API
 that lets existing software drive it. Each is independently composable — a
 deployment can serve `:2379` and not `:10250`.
 
-| contract | port / seam | state (2026-08-30) |
-|---|---|---|
-| **etcd v3** | `:2379`, `runtime.etcd_listen_addr` | read-only (`Range`/`Watch`/`Maintenance`); real `etcdctl` works |
-| **kubelet API** | `:10250`, `runtime.kubelet_listen_addr` | logs / pods / exec over `v5.channel.k8s.io` |
-| **CSI** | `<data_dir>/plugins_registry` | registration, node publish, dynamic provisioning — all wired |
-| **CNI** | `/etc/cni/net.d` | config + planning + exec + node status. **Pod-attach NOT wired** (`pending-cni: pod-attach`, needs Linux) |
-
-engenho also SHIPS its own implementations of both plugin contracts —
-`engenho-ipam` (a real CNI IPAM plugin) and `engenho-csi-localpath` (a real
-CSI driver). Naturalized, not vendored.
-
 > ### ★★ THE RULE: a contract is not implemented until a foreign oracle says so.
 >
-> Our own reference driver and reference plugin are real processes on real
-> sockets and they still **cannot falsify us** — same author, same reading of
-> the same spec, so they prove our encoder agrees with our decoder. The
-> differentials are what prove the contract. Measured on first contact:
->
-> | oracle | verdict |
-> |---|---|
-> | real `etcdctl` | **found a bug** — `db_size: 0` → integer divide by zero in `endpoint status` |
-> | `csi-driver-host-path` v1.15.0 | 3/3 clean |
-> | `containernetworking/plugins` 1.8.0 | **found a bug** — missing `IgnoreUnknown=true` meant engenho could drive NO upstream plugin |
->
-> Two of three. You cannot know which until you run it. Say "the contract is
-> implemented", never "proven", until one has.
->
-> ```bash
-> # CSI (works on darwin)
-> ENGENHO_CSI_ORACLE=/tmp/csi-state/csi.sock \
->   cargo test -p engenho-csi --test m2_3_foreign_driver_differential -- --ignored
-> # CNI (needs Linux; cni-plugins does not build on darwin at all)
-> ssh rio '… ENGENHO_CNI_PLUGIN_DIR=<store>/bin cargo test -p engenho-cni \
->   --test m3_1_foreign_plugin_differential -- --ignored'
-> ```
+> Our own reference driver and plugin cannot falsify us. Say "the contract is implemented", never "proven", until a foreign oracle has run. The per-contract state, the oracle verdicts (two of three found a bug) and the differential commands: `references/contract-ring.md`.
 
 ## ★ "type + backend + no producer" — the recurring defect class
 
@@ -217,19 +106,9 @@ the capability is absent. `grep` cannot find it.
 Detection: `grep -rn '<Trait>' --include=*.rs . | grep -v '<defining file>' |
 grep -v '/tests/'` → zero non-test hits.
 
-The worst instances were not missing features. `NetworkPolicyEnforcer` (#8)
-meant a default-deny policy applied cleanly and restricted nothing.
-`engenho-etcd` (#9) was a complete façade with 48 passing tests that nothing
-could dial — and its whole purpose was to be an oracle.
-
 **Rule: any new vocabulary ships its producer in the SAME commit.**
 
-And a near-miss trait naming your use case in its own header is not evidence it
-fits. `VolumeRuntime`'s header named `CsiVolumeBackend (R13b — gRPC to CSI
-plugins)` as future work; measured, its INPUTS are provisioning-shaped and its
-OUTPUT is mounting-shaped, while CSI splits those across two services on two
-machines. Compare input shape AND output shape — one matching half is a trap.
-It is now marked superseded, declaration retained (★★ MODULARIZE, DON'T DELETE).
+A near-miss trait naming your use case in its own header is not evidence it fits: compare input shape AND output shape. The receipts (`NetworkPolicyEnforcer`, `engenho-etcd`, `VolumeRuntime`): `references/no-producer-defect.md`.
 
 ## ★ Platform gaps are TYPED, never faked
 
@@ -247,63 +126,13 @@ an address either way and `kubectl` shows it either way.
 When adding a capability that cannot work on the host, copy this shape. A stub
 that returns success is the failure mode these exist to prevent.
 
-### engenho as a node's whole service layer
+Where Linux hosts are going (the host only boots and runs engenho; the node itself as a release): `references/service-layer.md`.
 
-The direction for Linux hosts is that the host OS only boots the machine and runs
-engenho, and everything else the host does runs on engenho as versioned Helm
-releases. On the `native` backend a pod's image is a realised Nix closure run as a
-host process. Every capability a host's services need from engenho (devices, host
-networking, restart and ordering guarantees, secrets) is therefore engenho's
-backlog, recorded in `docs/QUALIFICATION.md` with a failing case, the same as a
-qualification gap below.
+A local engenho cluster qualifies manifests bound for upstream Kubernetes. A gap it shows is engenho's backlog, never worked around in the consumer, and a pass is a floor, not proof of upstream behaviour: `references/qualification.md`.
 
-The step after that is the node itself: below a thin NixOS base, the system
-generation, packages and services are one release, served as `NixClosure`,
-`NixProfile` and `NodeGeneration` beside the Flux kinds, and a chart picks the
-Kubernetes API face it runs against (`docs/FLEET-DESIGN.md` §9.1 and §10).
+## Navigating the codebase
 
-### engenho as a qualification substrate — consumers' needs are its backlog
-
-A local engenho cluster is used to qualify manifests bound for upstream
-Kubernetes. When a qualification needs something engenho does not do, engenho
-gains the capability: measure the gap, prove it with `engenho-diff` (engenho vs a
-reference cluster), fix it with a case that goes red without the fix. Never work
-around it in the consumer or lower the qualification; until it lands, report
-which tier is blocked. A pass on engenho is a floor, not proof of upstream
-behaviour, for any tier still listed as a gap.
-
-The measured, source-mapped gaps (scalar type checking, OpenAPI coverage, OCI
-pods on `native` nodes, Events, admission webhooks, namespace deletion) live in
-engenho's [`docs/QUALIFICATION.md`](https://github.com/pleme-io/engenho/blob/main/docs/QUALIFICATION.md).
-Add new gaps there, not here.
-
-## Navigating the codebase (where things live)
-
-| Concern | Crate(s) |
-|---|---|
-| typed K8s catalog, GVK, faces translator, nomad_v1 | `engenho-types` |
-| K8s REST apiserver, watch, openapi | `engenho-apiserver`, `engenho-kube-client`, `engenho-kube-codegen` |
-| membership/raft/content/attest, topology strategies, `Face` | `engenho-revoada` |
-| NATS fabric (5 channels), subjects | `engenho-teia` |
-| dual raft store, ResourceCommand, watch | `engenho-store` |
-| **derivation engine** (Drv, WorkloadShape, oci_renderer, ledger, quorum, maquina, mirante, selo, …) | `engenho-substrate` |
-| reconcile controllers / scheduler / kubelet | `engenho-controllers`, `engenho-scheduler`, `engenho-kubelet` |
-| source-of-truth reconciler `(defsistema)` + Viggy 7-beat | `engenho-fonte` |
-| sui↔engenho bridge (`TypescapeValue`, `Typescape`) | `engenho-sui-typescape` |
-| shikumi config surface | `engenho-config`; bootstrap render: `engenho-cluster-config(-render)` |
-| the daemon's supervisor + lifecycle machine, boot journal, control service | `engenho-runtime` (`lifecycle/`, `boot/`, `control/`) |
-| control API types (spec-generated `OperationId`/`CATALOG`), SPKI pins | `engenho-control-types` |
-| control socket, remote listener, grants, audit chain | `engenho-control-server` |
-| control client (socket resolution, `render`, remotes) | `engenho-control-client` |
-| MCP reader + control tools (writer trait: P2) | `engenho-mcp` |
-
-Fast code search: `mcp__codesearch__search_exact` / `semantic_search`, or
-`cargo test -p <crate>` to verify a change.
-
-Newer crates not in the table above: `engenho-etcd` (etcd v3 façade + the
-`/registry` keyspace), `engenho-csi` (CSI client, registration, the
-`localpath` driver), `engenho-cni` (net.d config, chain exec, IPAM +
-the `engenho-ipam` plugin).
+Which crate owns which concern (types, apiserver, revoada, teia, store, substrate, controllers, fonte, runtime, control plane, MCP, etcd/CSI/CNI): `references/crate-map.md`. Fast code search: `mcp__codesearch__search_exact` / `semantic_search`, or `cargo test -p <crate>` to verify a change.
 
 ## The non-negotiable rules (don't violate)
 
@@ -339,14 +168,7 @@ the `engenho-ipam` plugin).
   the named source file (the doc names code, never a model; `ci/doc-sources.tlisp`
   fails CI on a pointer that stops resolving).
 - **"Why engenho / is this worth it / what is it for?"** → read
-  [`docs/WHY-ENGENHO.md`](https://github.com/pleme-io/engenho/blob/main/docs/WHY-ENGENHO.md). Short version:
-  Kubernetes and Nomad are the same shape in different packaging (server/client
-  + Raft + reconciliation), engenho is Nomad's packaging speaking Kubernetes'
-  contract, and the payoff is **testing / simulation / embedding** — because
-  Raft determinism and deterministic-simulation determinism are the SAME
-  requirement, and engenho already paid for it (`mint_uid` is BLAKE3-derived,
-  `relogio` is a typed clock seam, every side effect is behind an Environment
-  trait). The named next step is auditing away stray `SystemTime::now()` calls.
+  [`docs/WHY-ENGENHO.md`](https://github.com/pleme-io/engenho/blob/main/docs/WHY-ENGENHO.md). The short version: `references/why-engenho.md`.
 - **"Add a new typed primitive to the typescape"** → impl `Typescape` (round-trip
   law) per `engenho/docs/TYPESCAPE.md`, through the sui bridge
   (`engenho-sui-typescape`); a foreign type takes a local newtype to dodge the
@@ -354,3 +176,17 @@ the `engenho-ipam` plugin).
 
 This skill is deployed via blackmatter home-manager; changes land on `nix run
 .#rebuild` from the nix repo.
+
+## References
+
+- `references/status-2026-08-30.md`: the measured daemon, ports, API groups and counts
+- `references/repos-and-docs.md`: the repos, and which `engenho/docs/` file covers what
+- `references/control-plane.md`: the full `engenho ctl <resource> <verb>` table
+- `references/cluster-reader.md`: the `cluster_*` MCP tools
+- `references/kikai.md`: kikai subcommands and its lifecycle FSM
+- `references/contract-ring.md`: contract states, oracle verdicts, differential commands
+- `references/no-producer-defect.md`: the defect-class receipts
+- `references/service-layer.md`: engenho as a Linux node's whole service layer, and the node as a release
+- `references/qualification.md`: qualifying manifests on engenho, and what to do when it lacks a capability
+- `references/crate-map.md`: where each concern lives in the workspace
+- `references/why-engenho.md`: the short case for engenho (testing / simulation / embedding)
