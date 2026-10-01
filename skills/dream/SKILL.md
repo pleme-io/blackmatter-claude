@@ -70,7 +70,21 @@ telling you it is full, and shaving is the wrong response (see Trap 1).
 
 ## Measure before you touch anything
 
-Never consolidate from impression. Four numbers decide the whole pass:
+Start from the standing measurements, not from impression:
+
+- `skill-lint chain --dir <D>`: what a session started in `D` loads before any
+  work (global CLAUDE.md, the parent chain, every `@` import), per file. The
+  imported knowledge indexes are part of that number.
+- `skill-lint budget --skills-dir <each home> --strict`: the skill listing
+  against the platform budget, and any description past its cap.
+- `skill-lint usage report --since 30d`: which skills actually fire, which are
+  deployed and never used (merge/retire candidates), and the order the platform
+  drops descriptions on overflow.
+
+If the repo carries a gate over these (a flake check with per-session ceilings),
+run it; a dream that leaves the gate red is not done.
+
+Then, for the memory corpus itself, four numbers decide the pass:
 
 ```bash
 M=~/.claude/projects/<project>/memory
