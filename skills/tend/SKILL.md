@@ -1,6 +1,6 @@
 ---
 name: tend
-description: "Manages workspace repos with the tend CLI: sync, status, discover, config. Use when syncing org repos or a clone fails."
+description: "Sync and inspect workspace repos with the tend CLI"
 allowed-tools: Bash, Read, Write, Edit
 metadata:
   version: "1.0.1"

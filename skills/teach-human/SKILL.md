@@ -1,6 +1,6 @@
 ---
 name: teach-human
-description: Teaches a topic core-first, one rung per turn, quizzing before moving up. Use for teach me X, layer by layer.
+description: "Teach a topic core-first, one rung per turn"
 allowed-tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
 metadata:
   version: "1.0.1"

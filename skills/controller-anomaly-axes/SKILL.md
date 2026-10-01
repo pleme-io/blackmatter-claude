@@ -1,6 +1,6 @@
 ---
 name: controller-anomaly-axes
-description: "Controller anomaly axes: typed detectors, recurrence signatures, a time-graded escalation ladder. Use for recurring controller errors."
+description: "Typed detectors and escalation for recurring controller errs"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
   version: "0.2.0"

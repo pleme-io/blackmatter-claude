@@ -1,6 +1,6 @@
 ---
 name: present-next-best-action
-description: Refreshes open PRs, tickets and tasks live, then presents one ranked next action. Use for what's next, next best action.
+description: "Refresh live state, present one next best action"
 allowed-tools: Read, Bash, Grep, Glob
 metadata:
   version: "1.0.1"

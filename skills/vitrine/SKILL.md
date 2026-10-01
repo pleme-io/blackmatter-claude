@@ -1,6 +1,6 @@
 ---
 name: vitrine
-description: Ships an infra or chart change with pre-merge evidence, staging apply plus three-layer proof in the PR. Use for ship with evidence.
+description: "Ship an infra change with pre-merge staging evidence"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
   version: "0.1.1"

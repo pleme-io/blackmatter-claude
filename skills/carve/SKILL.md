@@ -1,6 +1,6 @@
 ---
 name: carve
-description: Splits a monolithic branch into a proven stack of scope-aligned PRs. Use for carve, split this PR, restack.
+description: "Split a monolithic branch into a stack of scoped PRs"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
   version: "0.2.1"

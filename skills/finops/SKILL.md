@@ -1,6 +1,6 @@
 ---
 name: finops
-description: "Runs FinOps with the *-forge tools: tags, attribution, showback, cost anomalies, rightsizing, commitments, lifecycle, unit cost, reviews."
+description: "FinOps via *-forge tools (tags, showback, rightsizing)"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
   version: "0.2.0"

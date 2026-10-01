@@ -1,6 +1,6 @@
 ---
 name: starfish-protocol
-description: States why pleme-io builds, to help as many conscious beings as possible. Use on starfish, why bother, does this matter.
+description: "Why pleme-io builds; does this matter"
 metadata:
   version: "0.1.1"
   domain_keywords:

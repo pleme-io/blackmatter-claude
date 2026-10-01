@@ -1,6 +1,6 @@
 ---
 name: shoken
-description: Checks a repo's README status, --help, --version, install command and claims against the code. Use before publishing a repo.
+description: "Check a repo's README claims against the code"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
   version: "0.1.1"

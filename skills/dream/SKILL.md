@@ -1,6 +1,6 @@
 ---
 name: dream
-description: Flushes agent memory into committed git homes until it is 0 bytes. Use during any wait, or on dream, consolidate memory.
+description: "Flush agent memory into git until it is 0 bytes"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
   version: "2.0.1"

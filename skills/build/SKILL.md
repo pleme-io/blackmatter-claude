@@ -1,6 +1,6 @@
 ---
 name: build
-description: Picks or creates the substrate Nix recipe for a project. Use when scaffolding a repo or adding a build system.
+description: "Pick or create the substrate Nix recipe for a project"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
   version: "1.0.1"

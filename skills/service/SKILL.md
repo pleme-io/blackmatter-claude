@@ -1,6 +1,6 @@
 ---
 name: service
-description: Runs service release, deploy, migrate and verify through forge and deploy.yaml. Use when releasing or deploying a service.
+description: "Release, deploy, migrate, verify a service via forge"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
   version: "1.0.1"

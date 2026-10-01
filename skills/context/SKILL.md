@@ -1,6 +1,6 @@
 ---
 name: context
-description: Creates and trims CLAUDE.md and ./docs, and audits the skill-listing budget. Use for bloated CLAUDE.md or skill sprawl.
+description: "Create or trim CLAUDE.md and docs; audit skill budget"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
   version: "2.0.1"
@@ -205,6 +205,11 @@ context work is actually optimizing against:
 - **Aggregate listing budget: 1% of the context window.** "When the listing
   overflows, Claude Code drops descriptions starting with the skills you invoke
   least." Raise with `skillListingBudgetFraction` or `SLASH_COMMAND_TOOL_CHAR_BUDGET`.
+  The doc's "1%" is not the number you get: read the real one from
+  `claude -p --debug-file <f> --model <m> "reply ok"`, which logs
+  `Skill listing over budget: N skills, X chars > B budget` on overflow. Measured
+  2026-10-01 (2.1.286): **B = 30,000 on a 1M-context model, 8,000 on a 200k one**,
+  and bundled skills take ~13,000 of it before any of yours.
 - **CLAUDE.md is re-injected into every subagent.** "Every level of the CLAUDE.md
   hierarchy the main conversation loads… The built-in Explore and Plan agents skip
   this," and "there is no frontmatter field or per-agent setting to change which
