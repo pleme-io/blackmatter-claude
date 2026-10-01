@@ -1,9 +1,10 @@
 ---
 name: dream
 description: >-
-  Consolidate an agent memory corpus — measure reachability, migrate durable
-  knowledge into CLAUDE.md/theory, merge duplicates, retire what is spent, and
-  re-cue the rest so no memory is written-but-never-loaded. Use during ANY wait
+  Flush agent memory into committed context and leave it at 0 bytes — every
+  memory moves to a git-tracked home (CLAUDE.md, theory, a skill, or the
+  operator's private knowledge base imported by a CLAUDE.md), nothing stays in
+  memory, and nothing becomes unreachable on the way. Use during ANY wait
   (a build, a workflow, a long agent run) as the standing answer to "what do I do
   while that runs", and whenever the operator says "dream", "consolidate memory",
   "refactor memory", "memory is full", "make memory efficient", "throw away the
@@ -12,8 +13,8 @@ description: >-
   yourself shortening index labels to make something fit.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "1.0.0"
-  last_verified: "2026-09-17"
+  version: "2.0.0"
+  last_verified: "2026-10-01"
   domain_keywords:
     - "memory consolidation"
     - "memory index"
@@ -33,6 +34,38 @@ admitting.
 session, and its only job is to let a future agent decide **which file to open**.
 CLAUDE.md and `theory/` are the slow vast storage. Dreaming moves things between
 them.
+
+## The end state: memory at 0 bytes
+
+**A dream ends with every memory directory empty.** Memory is an inbox, not a
+store: it is unversioned, unreviewable, invisible to other machines and
+sessions in other directories, and it silently stops admitting at its ceiling.
+Git is none of those. So the pass does not trim memory to fit; it empties it.
+
+- Each memory gets a committed home by kind: doctrine to CLAUDE.md or `theory/`,
+  a procedure to a skill, everything operator-specific or private to the
+  operator's **private knowledge base**: a `docs/knowledge/<scope>/` tree in a
+  private repo, one scope per working directory the memory came from.
+- Each scope keeps `INDEX.md` (curated, lean) and `INDEX-FULL.md` (every note).
+  The CLAUDE.md of the matching directory imports the scope's `INDEX.md` with an
+  `@` line, so what memory used to load is still in context. Because CLAUDE.md
+  loads from every parent directory, a deep session carries every level's
+  index: keep each one lean.
+- Filenames do not change in the move, so every place that cites a note by name
+  still resolves (`fd <name>` in the knowledge base). Do not mass-edit citing
+  docs.
+- Private content never goes to a public repo, CLAUDE.md included: check repo
+  visibility before choosing a home.
+- Scan for credential-shaped strings before the first commit, and let the
+  repo's secret hook speak. Reword a reference that only looks like a secret,
+  never bypass the hook.
+- Back up, copy, verify every copy byte-for-byte, commit, rebuild so the imports
+  render, confirm the rendered CLAUDE.md files carry them, and **only then**
+  delete the memory files.
+
+The rest of this skill (verdicts, traps, reachability) still governs how notes
+are routed and indexed; it now applies to the knowledge base indexes rather
+than to `MEMORY.md`.
 
 ## When
 
@@ -167,10 +200,18 @@ citation suppresses the search it was meant to start.
 
 ## Validation checklist
 
+- [ ] **Every memory directory is at 0 bytes** at the end, measured across all
+      project memory directories, not just the current one.
+- [ ] Every note is committed and pushed in its home; copies verified
+      byte-for-byte against the originals before any deletion.
+- [ ] Each scope's `INDEX.md` is imported by the matching directory's CLAUDE.md,
+      and the rendered CLAUDE.md files were read back to confirm the import line.
+- [ ] Credential scan done before the first commit; no hook bypassed.
+- [ ] No private note landed in a public repo.
 - [ ] Corpus backed up before any deletion.
 - [ ] Measured first; every claim carries a number and a date.
 - [ ] Unreachable = 0 and dead links = 0 in **both** indexes, re-measured at the end.
-- [ ] Index under its ceiling with headroom bought by promoting/retiring, not shaving.
+- [ ] Each imported index lean, with headroom bought by promoting/retiring, not shaving.
 - [ ] Every RETIRE names a superseder that was confirmed to exist on disk.
 - [ ] Migrated content landed via `context`/`contextualizify`, not pasted ad hoc.
 - [ ] Outward citations (CLAUDE.md → memory filenames) all resolve.
