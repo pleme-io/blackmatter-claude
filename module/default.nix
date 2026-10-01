@@ -741,7 +741,11 @@ in
               matcher = "Skill";
               hooks = record;
             }
-          ];
+          ]
+          ++ lib.optional skillUsageCfg.mcp.enable {
+            matcher = "mcp__.*";
+            hooks = record;
+          };
           UserPromptSubmit = [ { hooks = record; } ];
         };
       }

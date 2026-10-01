@@ -227,7 +227,10 @@ context work is actually optimizing against:
    receives. Cutting before measuring makes the result unmeasurable.
 2. **Fix the tooling layer before the prose.** It is cheaper, contained, and makes
    every later step cheaper. Sweep MCP servers for reachability — a dead registration
-   still pays full tool-schema and instruction-block cost forever.
+   still pays full tool-schema and instruction-block cost forever. Then price them by
+   use: `skill-lint usage report` counts skill invocations, and
+   `skill-lint usage mcp-report --since 30d --tools <names>` counts calls per MCP
+   server and ranks the configured-but-unused ones by tool count.
 3. **Correct facts before relocating them.** A collapse that moves a wrong claim is
    worse than the bloat.
 4. **Cut, then seal.** An unsealed cut regrows. Land a baseline-debt lint in the

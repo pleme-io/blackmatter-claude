@@ -1114,6 +1114,17 @@ in
         left in place.
       '';
     };
+
+    mcp.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Also record each MCP tool call (a `PreToolUse` hook with matcher
+        `mcp__.*`) as a server and tool name, never its arguments. Read it
+        with `skill-lint usage mcp-report`, which prices every configured
+        server by use. Only takes effect under `skillUsage.enable`.
+      '';
+    };
   };
 
   # ══════════════════════════════════════════════════════════════════════
