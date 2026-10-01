@@ -64,11 +64,12 @@
       inherit self nixpkgs;
       name = "blackmatter-claude";
       description = "Claude Code integration — LSP, MCP servers, skills, guardrails";
-      modules.homeManager = import ./module { inherit claude-code; };
+      modules.homeManager = import ./module { inherit claude-code skill-lint; };
       modules.darwin = ./module/desktop/darwin.nix;
       overlay = final: prev: {
         guardrail = guardrail.packages.${prev.stdenv.hostPlatform.system}.default;
         guardrail-rules = guardrail + "/rules";
+        skill-lint = skill-lint.packages.${prev.stdenv.hostPlatform.system}.default;
         claude-desktop = final.callPackage ./module/desktop/package.nix { };
         # Returns with the input above. Its absence is what the module's
         # assertion names, so enabling noroshi today fails with a sentence

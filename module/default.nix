@@ -20,7 +20,7 @@
 # Permissions:        https://docs.anthropic.com/en/docs/claude-code/permissions
 # Sandbox:            https://docs.anthropic.com/en/docs/claude-code/sandboxing
 #
-{ claude-code }:
+{ claude-code, skill-lint }:
 {
   lib,
   config,
@@ -45,6 +45,7 @@ let
   skillsCfg = cfg.skills;
   guardrailCfg = cfg.guardrail;
   noroshiCfg = cfg.noroshi;
+  skillUsageCfg = cfg.skillUsage;
   themeCfg = cfg.theme;
 
   inherit (pkgs.stdenv.hostPlatform) isLinux isDarwin;
@@ -240,6 +241,13 @@ let
 
   # Claude Code reads MCP servers from ~/.claude.json (user scope)
   claudeConfigPath = "${config.home.homeDirectory}/.claude.json";
+
+  # ── skill-lint (the skill-usage recorder) ───────────────────────────
+  # From the overlay when the consumer applies it, as guardrail is. The
+  # flake input is the fallback because skillUsage defaults ON: a consumer
+  # that never applied this overlay must still evaluate, not fail on a
+  # missing attribute for a feature it never asked for.
+  skillLintPkg = pkgs.skill-lint or skill-lint.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   # ── Config merge tool (Rust, zero deps) ─────────────────────────────
   # Deep-merges Nix-managed JSON into user config files and removes
@@ -581,9 +589,10 @@ in
 
       # PreToolUse hooks:
       #   • Bash       → guardrail check (block destructive commands)
-      #   • Grep|Glob  → guardrail search-nudge (advisory-only; steer toward
-      #                  mcp__zoekt__search — never denies today, see
-      #                  guardrail's promote-to-deny TODO).
+      #   • Grep|Glob  → guardrail search-nudge (advisory-only; steers toward
+      #                  codesearch — mcp__codesearch__search_exact for
+      #                  regex/literal, semantic_search for intent. Never
+      #                  denies today, see guardrail's promote-to-deny TODO).
       blackmatter.components.claude.hooks.PreToolUse = [
         {
           matcher = "Bash";
@@ -705,6 +714,38 @@ in
         }
       ]) (lib.filterAttrs (_: policy: policy == "signal") noroshiCfg.events);
     })
+
+    # Skill usage → one log line per skill invocation, for keep / merge /
+    # retire decisions made from counts. Same hook seam as guardrail and
+    # noroshi; the binary owns the record type and the log path.
+    #
+    # Two events, because a skill is invoked two ways: the model calls the
+    # `Skill` tool (PreToolUse, matcher `Skill`), or the operator types
+    # `/<skill>` (UserPromptSubmit, which takes no matcher). The recorder
+    # decides which prompts are skill invocations, and exits 0 with no output
+    # on everything else — a UserPromptSubmit hook's stdout reaches the
+    # session, and exit 2 from either hook blocks it.
+    (mkIf (cfg.enable && skillUsageCfg.enable) (
+      let
+        record = [
+          {
+            type = "command";
+            command = "${skillLintPkg}/bin/skill-lint usage record";
+          }
+        ];
+      in
+      {
+        blackmatter.components.claude.hooks = {
+          PreToolUse = [
+            {
+              matcher = "Skill";
+              hooks = record;
+            }
+          ];
+          UserPromptSubmit = [ { hooks = record; } ];
+        };
+      }
+    ))
 
     # Settings → deep-merged into ~/.claude/settings.json
     # Consolidates all settings: core, permissions, hooks, sandbox,

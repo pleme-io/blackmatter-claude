@@ -1090,6 +1090,33 @@ in
   };
 
   # ══════════════════════════════════════════════════════════════════════
+  # SKILL USAGE — local record of which skills are actually invoked
+  # ══════════════════════════════════════════════════════════════════════
+  #
+  # The skill listing has a character budget, and on overflow the platform
+  # drops descriptions starting with the least-invoked skills. Invocation
+  # counts were not on disk, so keep / merge / retire decisions about skills
+  # had no data. These hooks put the counts on disk; `skill-lint usage
+  # report` reads them back. Nothing leaves the machine.
+
+  skillUsage = {
+    enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Record each skill invocation to
+        `$XDG_STATE_HOME/skill-lint/usage.jsonl` (else
+        `~/.local/state/skill-lint/usage.jsonl`): a `PreToolUse` hook on the
+        `Skill` tool and a `UserPromptSubmit` hook for typed `/<skill>`
+        commands, both running `skill-lint usage record`. The recorder
+        never blocks, never prints and always exits 0. Read the result with
+        `skill-lint usage report`. Set false to stop recording; the log is
+        left in place.
+      '';
+    };
+  };
+
+  # ══════════════════════════════════════════════════════════════════════
   # THEME
   # ══════════════════════════════════════════════════════════════════════
 

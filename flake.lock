@@ -2463,11 +2463,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788023477,
-        "narHash": "sha256-LPFPNhz3Ka6pu5Dq67Hkb1SGmpO0AScqiYwUUZ0XlP0=",
+        "lastModified": 1790876690,
+        "narHash": "sha256-vPd1gOc6/q4yq+IyDVXdBQwP80TG1Vn1JwCbJACu5Ak=",
         "owner": "pleme-io",
         "repo": "skill-lint",
-        "rev": "7ed20e22296bbe4d5fb4629ded3379c0b8fffd1d",
+        "rev": "ce9f34479cddf8c5a25203e18574a22c425ae6d4",
         "type": "github"
       },
       "original": {
