@@ -88,6 +88,8 @@ module/
   statusline.rs                 # Zero-dep Rust Nord statusline generator
 skills/
   tend/SKILL.md                 # Bundled: workspace repo management
+  finops/SKILL.md               # Bundled: nine FinOps practices, one per references/<practice>.md
+  controller-anomaly-axes/      # Bundled: detection + recurrence + escalation ladder
 ```
 
 ## Adding new settings

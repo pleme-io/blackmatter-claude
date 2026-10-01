@@ -132,20 +132,18 @@
           # frontmatter and stay green. Violation-level baselining is a
           # skill-lint change (a `--baseline <file>` argument), and it is the
           # load-bearing fix; this list is the honest interim until then.
+          #
+          # MERGED 2026-10-01, debt carried, not cleared. Twelve of the thirteen
+          # entries were folded into two skills: the nine FinOps practices into
+          # `finops` (each practice kept whole under finops/references/), and
+          # anomaly-recurrence + controller-detection-axis + escalation-ladder
+          # into `controller-anomaly-axes`. The merge was mechanical, not a human
+          # re-read, so the two survivors inherit the debt and stay listed.
+          # Counted 2026-10-01: 14 skills, 3 on this list, 11 gated.
           skillDebt = [
-            "anomaly-recurrence"
-            "cadence-review"
-            "chargeback-rollout"
-            "commitment-review"
-            "controller-detection-axis"
-            "cost-anomaly"
-            "cost-attribution"
-            "escalation-ladder"
-            "lifecycle-policy"
-            "rightsize-fleet"
+            "controller-anomaly-axes"
+            "finops"
             "starfish-protocol"
-            "tag-architecture"
-            "unit-economics"
           ];
 
           # The gated subset, as a REAL directory tree (builtins.path, not
@@ -219,7 +217,8 @@
           # WHAT IS AND IS NOT COVERED — do not round this up. COVERED: 9 of 22
           # skills, plus every skill added from here on. NOT COVERED: the 13
           # baselined above, and whether any of these skills appear in the fleet
-          # map at all (measured 2026-07-27: none do).
+          # map at all (measured 2026-07-27: none do). Recounted 2026-10-01
+          # after the merges: 11 of 14 gated, the 3 baselined above not.
           #
           # NOT VACUOUS: skill-lint's own DiscoveryChecker fails the run when
           # zero skills are found, so this can never pass having scanned

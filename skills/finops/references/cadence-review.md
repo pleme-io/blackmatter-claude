@@ -1,22 +1,8 @@
----
-name: cadence-review
-description: Composes weekly, monthly or quarterly FinOps review packets with cadence-forge. Use for a recurring cost review.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash
-metadata:
-  version: "0.1.1"
-  domain_keywords:
-    - "cadence-review"
-    - "weekly-review"
-    - "monthly-review"
-    - "quarterly-review"
-    - "cadence-forge"
-    - "finops"
-    - "review-packet"
----
+> Practice reference of the `finops` skill. Until 2026-10-01 this was the standalone skill `cadence-review` (version 0.1.1). Former description: Composes weekly, monthly or quarterly FinOps review packets with cadence-forge. Use for a recurring cost review. Former domain keywords: `cadence-review`, `weekly-review`, `monthly-review`, `quarterly-review`, `cadence-forge`, `finops`, `review-packet`.
 
 # cadence-review — The recurring FinOps review
 
-This skill wraps the `cadence-forge` Rust binary with workflow guidance
+This practice wraps the `cadence-forge` Rust binary with workflow guidance
 for **the recurring FinOps reviews** — weekly team, monthly program,
 quarterly leadership, annual strategic.
 
@@ -42,14 +28,14 @@ audience and a different question.
   - `cadence-forge render &lt;spec&gt; --output &lt;path&gt;` — write to a file.
   - `cadence-forge spec sections &lt;spec&gt;` — list sections.
   - `cadence-forge spec print &lt;spec&gt;` — canonical YAML.
-- **`showback-forge`** (skill: `chargeback-rollout`) — produces
+- **`showback-forge`** (practice: `chargeback-rollout`) — produces
   trend/render/top sections.
-- **`anomaly-forge`** (skill: `cost-anomaly`) — produces anomaly section.
-- **`rightsize-forge`** (skill: `rightsize-fleet`) — produces
+- **`anomaly-forge`** (practice: `cost-anomaly`) — produces anomaly section.
+- **`rightsize-forge`** (practice: `rightsize-fleet`) — produces
   recommendation section.
-- **`commitment-forge`** (skill: `commitment-review`) — produces
+- **`commitment-forge`** (practice: `commitment-review`) — produces
   portfolio status section (quarterly especially).
-- **`unit-econ-forge`** (skill: `unit-economics`) — produces unit-economic
+- **`unit-econ-forge`** (practice: `unit-economics`) — produces unit-economic
   metric section.
 
 ## Workflow
@@ -157,7 +143,7 @@ When a team is already doing reviews but with hand-aggregated data:
   it keeps the rhythm so an actual change next week doesn't go
   unreviewed.
 
-## Related skills
+## Related practices
 
 - `chargeback-rollout` — provides the showback views the cadence
   packets embed.

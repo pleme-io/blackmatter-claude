@@ -1,22 +1,8 @@
----
-name: commitment-review
-description: Reviews the commitment portfolio with commitment-forge. Use for savings plans, CUDs, reserved instances, expiring commits.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash
-metadata:
-  version: "0.1.1"
-  domain_keywords:
-    - "commitment"
-    - "savings-plan"
-    - "CUD"
-    - "reserved-instance"
-    - "commitment-forge"
-    - "finops"
-    - "rate-optimization"
----
+> Practice reference of the `finops` skill. Until 2026-10-01 this was the standalone skill `commitment-review` (version 0.1.1). Former description: Reviews the commitment portfolio with commitment-forge. Use for savings plans, CUDs, reserved instances, expiring commits. Former domain keywords: `commitment`, `savings-plan`, `CUD`, `reserved-instance`, `commitment-forge`, `finops`, `rate-optimization`.
 
 # commitment-review — Quarterly commitment-portfolio review
 
-This skill wraps the `commitment-forge` Rust binary with workflow guidance
+This practice wraps the `commitment-forge` Rust binary with workflow guidance
 for the canonical quarterly cadence and the discrete moments that demand
 a commitment decision: new buy, renewal, expiry, baseline shift.
 
@@ -45,9 +31,9 @@ right things.
   - `commitment-forge portfolio layers --portfolio p.yaml` — list layers
   - `commitment-forge analyze &lt;events&gt; --portfolio p.yaml --bucket 1d`
   - `commitment-forge analyze ... --format json`
-- **`attribution-forge`** (separate skill: `cost-attribution`) — produces
+- **`attribution-forge`** (practice: `cost-attribution`) — produces
   the events the analyzer consumes.
-- **`showback-forge`** (separate skill: `chargeback-rollout`) — useful
+- **`showback-forge`** (practice: `chargeback-rollout`) — useful
   for "show the layer-by-layer view to leadership during the review."
 
 ## Workflow
@@ -149,7 +135,7 @@ Karpenter/spot adoption, big tenant change):
 - **Treating layer_discounts as fixed.** Cloud providers renegotiate;
   contract overlays should be refreshed annually at minimum.
 
-## Related skills
+## Related practices
 
 - `cost-attribution` — produces the JSONL the analyzer consumes;
   coverage health affects baseline accuracy.

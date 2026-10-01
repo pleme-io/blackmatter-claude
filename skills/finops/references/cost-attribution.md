@@ -1,22 +1,8 @@
----
-name: cost-attribution
-description: Wires and audits the cost-attribution data plane with attribution-forge. Use for what did X cost or an attribution gap.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash
-metadata:
-  version: "0.1.1"
-  domain_keywords:
-    - "cost-attribution"
-    - "billing"
-    - "cost-per"
-    - "showback"
-    - "unit-economics"
-    - "attribution-forge"
-    - "finops"
----
+> Practice reference of the `finops` skill. Until 2026-10-01 this was the standalone skill `cost-attribution` (version 0.1.1). Former description: Wires and audits the cost-attribution data plane with attribution-forge. Use for what did X cost or an attribution gap. Former domain keywords: `cost-attribution`, `billing`, `cost-per`, `showback`, `unit-economics`, `attribution-forge`, `finops`.
 
 # cost-attribution — The cost-attribution data plane
 
-This skill wraps the `attribution-forge` Rust binary with workflow guidance
+This practice wraps the `attribution-forge` Rust binary with workflow guidance
 for the four canonical situations: source wiring, gap investigation,
 ad-hoc cost queries, and data-plane health checks.
 
@@ -46,7 +32,7 @@ questions become SQL queries instead of tickets.
   - `attribution-forge ingest --sources &lt;cfg&gt; --output &lt;events.jsonl&gt;`
   - `attribution-forge query &lt;events&gt; --by &lt;dims&gt; [--format json]`
   - `attribution-forge verify &lt;events&gt; --required &lt;dims&gt; [--format json]`
-- **`tag-forge`** (separate skill: `tag-architecture`) — pre-step. If
+- **`tag-forge`** (practice: `tag-architecture`) — pre-step. If
   attribution is broken, tagging is often the root cause.
 
 ## Workflow
@@ -140,7 +126,7 @@ questions become SQL queries instead of tickets.
    This is intentional — the verify command is CI-friendly.
 4. If coverage is below threshold, the disposition is one of:
    - Tag the under-tagged resources at the source (via `tag-architecture`
-     skill).
+     practice).
    - Add a virtual-allocation rule for inherently untaggable spend.
    - Adjust the column map if the data is present but the mapping is
      wrong.
@@ -173,7 +159,7 @@ questions become SQL queries instead of tickets.
   should produce a verify report before the data plane is considered
   healthy with it included.
 
-## Related skills
+## Related practices
 
 - `tag-architecture` — the upstream skill. If tags are bad, attribution
   is bad.

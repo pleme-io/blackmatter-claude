@@ -1,23 +1,8 @@
----
-name: lifecycle-policy
-description: Authors and enforces TTL, expiry and storage-tier policies with lifecycle-forge. Use for retention or recurring cleanup.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash
-metadata:
-  version: "0.1.1"
-  domain_keywords:
-    - "lifecycle"
-    - "ttl"
-    - "expiry"
-    - "retention"
-    - "storage-tier"
-    - "lifecycle-forge"
-    - "cleanup"
-    - "garbage-collection"
----
+> Practice reference of the `finops` skill. Until 2026-10-01 this was the standalone skill `lifecycle-policy` (version 0.1.1). Former description: Authors and enforces TTL, expiry and storage-tier policies with lifecycle-forge. Use for retention or recurring cleanup. Former domain keywords: `lifecycle`, `ttl`, `expiry`, `retention`, `storage-tier`, `lifecycle-forge`, `cleanup`, `garbage-collection`.
 
 # lifecycle-policy — Declarative lifecycle as architecture
 
-This skill wraps the `lifecycle-forge` Rust binary with the workflow guidance
+This practice wraps the `lifecycle-forge` Rust binary with the workflow guidance
 for four canonical situations: authoring a new policy, investigating
 unhandled resources, wiring lifecycle into CI, and reviewing the audit
 posture quarterly.
@@ -170,7 +155,7 @@ a soft surface (emit the plan as an artifact for review). When the
   policies live in a private overlay. The public `configs/default.yaml`
   is illustrative only.
 
-## Related skills
+## Related practices
 
 - `tag-architecture` — many lifecycle policies key on tags / labels.
   Tag drift causes lifecycle drift.

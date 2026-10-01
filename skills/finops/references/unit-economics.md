@@ -1,21 +1,8 @@
----
-name: unit-economics
-description: Computes cost-per-unit metrics such as cost-per-request with unit-econ-forge. Use for gross margin or pricing.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash
-metadata:
-  version: "0.1.1"
-  domain_keywords:
-    - "unit-economics"
-    - "cost-per-customer"
-    - "cost-per-request"
-    - "gross-margin"
-    - "pricing"
-    - "unit-econ-forge"
----
+> Practice reference of the `finops` skill. Until 2026-10-01 this was the standalone skill `unit-economics` (version 0.1.1). Former description: Computes cost-per-unit metrics such as cost-per-request with unit-econ-forge. Use for gross margin or pricing. Former domain keywords: `unit-economics`, `cost-per-customer`, `cost-per-request`, `gross-margin`, `pricing`, `unit-econ-forge`.
 
 # unit-economics — Per-unit cost economics
 
-This skill wraps the `unit-econ-forge` Rust binary with workflow guidance
+This practice wraps the `unit-econ-forge` Rust binary with workflow guidance
 for four canonical situations: defining a new metric, debugging a metric
 that looks wrong, pre-pricing a new product, and refreshing the
 unit-economics view for the monthly review.
@@ -48,9 +35,9 @@ sits on.
   - `unit-econ-forge metrics print --metrics m.yaml &lt;id&gt;` — show one definition
   - `unit-econ-forge compute --metrics m.yaml [--id &lt;single&gt;] [--format json]`
   - `unit-econ-forge schema` — canonical cost-event + unit-event shapes
-- **`attribution-forge`** (separate skill: `cost-attribution`) — produces
+- **`attribution-forge`** (practice: `cost-attribution`) — produces
   the cost events this tool consumes.
-- **`tag-forge`** (separate skill: `tag-architecture`) — keeps the
+- **`tag-forge`** (practice: `tag-architecture`) — keeps the
   dimension namespace consistent so unit-event dimensions match cost-event
   dimensions.
 
@@ -153,7 +140,7 @@ join.
   age — what was "an active customer" two years ago may not be the
   same definition today. Annual metric review.
 
-## Related skills
+## Related practices
 
 - `cost-attribution` — produces the cost events this tool consumes.
 - `tag-architecture` — keeps dimension namespaces aligned between

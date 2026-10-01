@@ -1,21 +1,8 @@
----
-name: chargeback-rollout
-description: Renders team cost views with showback-forge and plans the move to chargeback. Use for team cost trends.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash
-metadata:
-  version: "0.1.1"
-  domain_keywords:
-    - "showback"
-    - "chargeback"
-    - "team-cost"
-    - "showback-forge"
-    - "finops"
-    - "review"
----
+> Practice reference of the `finops` skill. Until 2026-10-01 this was the standalone skill `chargeback-rollout` (version 0.1.1). Former description: Renders team cost views with showback-forge and plans the move to chargeback. Use for team cost trends. Former domain keywords: `showback`, `chargeback`, `team-cost`, `showback-forge`, `finops`, `review`.
 
 # chargeback-rollout — Showback views and the journey to chargeback
 
-This skill wraps the `showback-forge` Rust binary plus the **showback→chargeback
+This practice wraps the `showback-forge` Rust binary plus the **showback→chargeback
 journey** — the multi-quarter rollout from "every team can see their cost"
 (showback) to "every team's budget is debited by their cost" (chargeback).
 
@@ -41,9 +28,9 @@ discipline.
   - `showback-forge render &lt;events&gt; --dimension X --period P --periods N` — wide table
   - `showback-forge trend &lt;events&gt; --dimension X --period P --periods N` — delta + sparkline
   - `showback-forge top &lt;events&gt; --dimension X --period P --limit N` — top-N for latest period
-- **`attribution-forge`** (separate skill: `cost-attribution`) — produces
+- **`attribution-forge`** (practice: `cost-attribution`) — produces
   the JSONL events these views render.
-- **`tag-forge`** (separate skill: `tag-architecture`) — keeps dimension
+- **`tag-forge`** (practice: `tag-architecture`) — keeps dimension
   values stable so trend lines aren't broken by taxonomy churn.
 
 ## Workflow
@@ -51,7 +38,7 @@ discipline.
 ### A) Authoring views for a new team
 
 1. **Confirm the team's dimension lives in the taxonomy** (typically
-   `cost_center` or `team`). If it doesn't, `tag-architecture` skill first.
+   `cost_center` or `team`). If it doesn't, `tag-architecture` practice first.
 2. **Pick the team's review cadence** — weekly is typical for
    engineering, monthly for product / leadership.
 3. **Pick the period count** — show enough history for a team to see
@@ -149,7 +136,7 @@ the next phase needs.
   coverage is &lt;90%, every showback view is suspect. Fix tagging
   first; render second.
 
-## Related skills
+## Related practices
 
 - `cost-attribution` — produces the JSONL these views consume; check
   coverage health before publishing showback to teams.

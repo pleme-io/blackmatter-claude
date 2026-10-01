@@ -1,22 +1,8 @@
----
-name: tag-architecture
-description: Designs and enforces the cost-allocation tag taxonomy with tag-forge. Use when tag coverage drops or a service onboards.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash
-metadata:
-  version: "0.1.1"
-  domain_keywords:
-    - "tag"
-    - "label"
-    - "taxonomy"
-    - "cost-center"
-    - "allocation"
-    - "finops"
-    - "tag-forge"
----
+> Practice reference of the `finops` skill. Until 2026-10-01 this was the standalone skill `tag-architecture` (version 0.1.1). Former description: Designs and enforces the cost-allocation tag taxonomy with tag-forge. Use when tag coverage drops or a service onboards. Former domain keywords: `tag`, `label`, `taxonomy`, `cost-center`, `allocation`, `finops`, `tag-forge`.
 
 # tag-architecture — Cost-allocation tag taxonomy design + enforcement
 
-This skill wraps the `tag-forge` Rust binary with the workflow guidance for the
+This practice wraps the `tag-forge` Rust binary with the workflow guidance for the
 four canonical situations: new-service onboarding, coverage drop, dimension
 addition, and attribution-gap investigation.
 
@@ -43,7 +29,7 @@ some of it gets there through virtual-allocation rules.
   - `tag-forge taxonomy describe <dim>` — describe one dimension
   - `tag-forge validate <plan>` — exit non-zero on violations
   - `tag-forge scan <dir>` — coverage report across a manifest tree
-- **`attribution-forge`** (separate skill: `cost-attribution`) — to verify
+- **`attribution-forge`** (practice: `cost-attribution`) — to verify
   post-change that the tags reach the attribution layer cleanly.
 
 ## Workflow
@@ -71,7 +57,7 @@ some of it gets there through virtual-allocation rules.
 ### B) Tag coverage drop — anomaly-driven
 
 1. Identify which dimension(s) dropped from anomaly-forge output / cost-anomaly
-   skill investigation.
+   practice investigation.
 2. Scan to localize:
    ```bash
    tag-forge --config $TAG_FORGE_CONFIG scan path/to/manifests/ --format json | jq '.per_dimension'
@@ -100,7 +86,7 @@ some of it gets there through virtual-allocation rules.
    - **Backfill existing on a campaign** — typically a quarter, tracked in a
      Confluence rollout doc.
 5. Update the attribution data plane's join keys downstream
-   (see `cost-attribution` skill).
+   (see `cost-attribution` practice).
 
 ### D) Investigating an attribution gap
 
@@ -143,7 +129,7 @@ some of it gets there through virtual-allocation rules.
   not the binary. If you're tempted to hard-code, you're modeling something
   that should be a validator.
 
-## Related skills
+## Related practices
 
 - `cost-attribution` — wires the tags into the cost-attribution data plane.
 - `lifecycle-policy` — uses the `lifecycle` dimension to drive TTL / retention.

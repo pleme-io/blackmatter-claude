@@ -1,22 +1,8 @@
----
-name: rightsize-fleet
-description: Produces and reviews rightsizing recommendations with rightsize-forge. Use for downsize candidates or sizing policy.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash
-metadata:
-  version: "0.1.1"
-  domain_keywords:
-    - "rightsize"
-    - "rightsizing"
-    - "downsize"
-    - "sizing"
-    - "utilization"
-    - "rightsize-forge"
-    - "finops"
----
+> Practice reference of the `finops` skill. Until 2026-10-01 this was the standalone skill `rightsize-fleet` (version 0.1.1). Former description: Produces and reviews rightsizing recommendations with rightsize-forge. Use for downsize candidates or sizing policy. Former domain keywords: `rightsize`, `rightsizing`, `downsize`, `sizing`, `utilization`, `rightsize-forge`, `finops`.
 
 # rightsize-fleet — Continuous, multi-signal rightsizing
 
-This skill wraps the `rightsize-forge` Rust binary with workflow guidance
+This practice wraps the `rightsize-forge` Rust binary with workflow guidance
 for four canonical situations: running a periodic rightsizing pass,
 investigating a specific resource, tuning the policy, and wiring
 rightsizing into CI.
@@ -48,7 +34,7 @@ rightsizing drifts ≤5% off optimal at any moment."
   - `rightsize-forge shapes print --shapes &lt;yaml&gt; &lt;id&gt;` — describe one.
   - `rightsize-forge schema` — print canonical Observation schema.
 - **Phase C profiler output** (in flight) — utilization source.
-- **`attribution-forge`** (separate skill: `cost-attribution`) — when
+- **`attribution-forge`** (practice: `cost-attribution`) — when
   estimating real savings, the attribution data can credit savings back
   to the resource's cost_center.
 
@@ -177,7 +163,7 @@ sizing drift."
   poorly observed (data problem). Investigate which, don't tune dials
   until you know.
 
-## Related skills
+## Related practices
 
 - `cost-attribution` — credit projected savings back to the cost_center.
 - `unit-economics` — recommendations change unit economics; refresh after

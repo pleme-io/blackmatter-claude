@@ -1,22 +1,8 @@
----
-name: cost-anomaly
-description: Detects and triages cost spikes, drift and missing spend with anomaly-forge. Use when a cost alert fires.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash
-metadata:
-  version: "0.1.1"
-  domain_keywords:
-    - "anomaly"
-    - "cost-spike"
-    - "drift"
-    - "anomaly-forge"
-    - "finops"
-    - "alert"
-    - "regression"
----
+> Practice reference of the `finops` skill. Until 2026-10-01 this was the standalone skill `cost-anomaly` (version 0.1.1). Former description: Detects and triages cost spikes, drift and missing spend with anomaly-forge. Use when a cost alert fires. Former domain keywords: `anomaly`, `cost-spike`, `drift`, `anomaly-forge`, `finops`, `alert`, `regression`.
 
 # cost-anomaly — Cost-anomaly detection &amp; investigation
 
-This skill wraps the `anomaly-forge` Rust binary with workflow guidance
+This practice wraps the `anomaly-forge` Rust binary with workflow guidance
 for four canonical situations: investigating an alert, authoring a new
 detection rule, doing a backfill / monthly anomaly review, and tuning
 sensitivity.
@@ -53,9 +39,9 @@ so the next one of those gets caught in days.
     severities.
   - `anomaly-forge rules print --rules &lt;rules.yaml&gt; &lt;id&gt;` — describe
     one rule.
-- **`attribution-forge`** (separate skill: `cost-attribution`) — produces
+- **`attribution-forge`** (practice: `cost-attribution`) — produces
   the JSONL events this tool reads.
-- **`tag-forge`** (separate skill: `tag-architecture`) — if anomalies
+- **`tag-forge`** (practice: `tag-architecture`) — if anomalies
   cluster in `(missing)` buckets, the upstream is a tagging gap.
 
 ## Workflow
@@ -177,7 +163,7 @@ Symptoms a rule is mis-tuned:
   alert is a noise generator. Either close it or note why it's
   expected.
 
-## Related skills
+## Related practices
 
 - `cost-attribution` — the upstream data plane. If attribution coverage
   drops, anomalies start firing on data drift, not workload drift.
