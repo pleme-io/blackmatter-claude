@@ -158,9 +158,9 @@ redundant with their own filename (3,658 bytes) while the shaving campaign on th
 cryptic ones recovered ~1,300. **Fix a ceiling by promoting and retiring.**
 
 **2. Never read "unreachable" as "low value".** It almost always means the index
-hit its ceiling. The 2026-09-17 pass found the **akeyless STEALTH trio**
-unreachable from both indexes — an L1 disclosure rule governing whether AI
-attribution leaks onto customer-facing artifacts, invisible to every session.
+hit its ceiling. The 2026-09-17 pass found three top-priority disclosure rules
+unreachable from both indexes — rules governing what may appear on
+customer-facing artifacts, invisible to every session.
 
 **3. One lost character can strand a hundred memories.** That same corpus had
 `[INDEX-FULLmd](INDEX-FULLmd)` in the header — a dot lost to an earlier shave —
