@@ -156,10 +156,8 @@ Which crate owns which concern (types, apiserver, revoada, teia, store, substrat
 ## Common tasks
 
 - **"Is this machine's engenho healthy / why won't it boot?"** → `engenho
-  status` (one report: verdict, lifecycle, store, children, boot, PKI,
-  kubeconfigs, drift, control, recent events; `--remote <name>` for another
-  machine's, `--json` for every answer; exit 0 healthy, 1 degraded, 4
-  unreachable). To dig in: `engenho ctl runtime show`, then `boot show` (the failed phase and its error), `config
+  status` (whole-daemon report; `--remote <name>`, `--json`; exit 0 healthy,
+  1 degraded, 4 unreachable). To dig in: `engenho ctl runtime show`, then `boot show` (the failed phase and its error), `config
   drift`, `logs list --level warn`. A held failure is fixed by `config set …`
   (an override) or a declared-file change, then `runtime retry` — no restart of
   the process.
