@@ -448,6 +448,8 @@ in
     # Claude Code package installation
     (mkIf cfg.enable { home.packages = [ cfg.package ]; })
 
+    { blackmatter.components.claude.mcp.resolvedServers = mcpServers; }
+
     # Doctrine flow: anvil → claude. Each key in
     # `anvil.translatedSettings.claude` is applied to
     # `blackmatter.components.claude.settings.<key>` via mkDefault, so

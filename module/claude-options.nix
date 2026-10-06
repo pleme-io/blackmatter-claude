@@ -842,6 +842,12 @@ in
       default = { };
       description = "Additional MCP servers merged on top of anvil-generated and service-level.";
     };
+
+    resolvedServers = mkOption {
+      type = types.attrs;
+      readOnly = true;
+      description = "The merged MCP server set written to ~/.claude.json (anvil // service-level // extraServers). Derived; read it to project a subset elsewhere, such as Claude Desktop.";
+    };
   };
 
   # ══════════════════════════════════════════════════════════════════════
