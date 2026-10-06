@@ -1015,6 +1015,37 @@ in
       default = [ ];
       description = "Names of compiled-in rules to disable.";
     };
+
+    toolInputLimits = mkOption {
+      type = types.listOf (
+        types.submodule {
+          options = {
+            name = mkOption {
+              type = types.str;
+              description = "Rule name shown when a call is blocked.";
+            };
+            tools = mkOption {
+              type = types.nonEmptyListOf types.str;
+              description = "Exact tool names the limit applies to; the PreToolUse hook is registered for exactly these.";
+            };
+            field = mkOption {
+              type = types.str;
+              description = "The tool input field whose length is limited.";
+            };
+            maxChars = mkOption {
+              type = types.ints.positive;
+              description = "Maximum length in characters; a longer value blocks the call.";
+            };
+            message = mkOption {
+              type = types.str;
+              description = "Why the limit exists, shown to the agent when it blocks.";
+            };
+          };
+        }
+      );
+      default = [ ];
+      description = "Per-tool field length limits enforced by `guardrail input-limit`.";
+    };
   };
 
   # ══════════════════════════════════════════════════════════════════════

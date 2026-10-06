@@ -561,6 +561,7 @@ in
           };
           extraRules = guardrailCfg.extraRules;
           disabledRules = guardrailCfg.disabledRules;
+          toolInputLimits = guardrailCfg.toolInputLimits;
         };
       }
       //
@@ -612,7 +613,18 @@ in
             }
           ];
         }
-      ];
+      ]
+      ++ lib.optional (guardrailCfg.toolInputLimits != [ ]) {
+        matcher = lib.concatStringsSep "|" (
+          lib.unique (lib.concatMap (l: l.tools) guardrailCfg.toolInputLimits)
+        );
+        hooks = [
+          {
+            type = "command";
+            command = "${pkgs.guardrail}/bin/guardrail input-limit";
+          }
+        ];
+      };
 
       # PostToolUse hooks:
       #   • Grep|Glob   → advisory context nudging the next lookup toward the
