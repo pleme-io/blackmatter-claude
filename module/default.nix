@@ -661,6 +661,20 @@ in
           mention = noroshiCfg.mention;
           host = noroshiCfg.host;
           events = noroshiCfg.events;
+          render = {
+            inherit (noroshiCfg.render)
+              detail
+              markdown
+              project
+              branch
+              session
+              ;
+            said_max = noroshiCfg.render.saidMax;
+            quote_claude = noroshiCfg.render.quoteClaude;
+          }
+          // lib.optionalAttrs (noroshiCfg.render.headlines != { }) {
+            inherit (noroshiCfg.render) headlines;
+          };
         }
         // lib.optionalAttrs (noroshiCfg.webhookUrlFile != null) {
           webhook_url_file = noroshiCfg.webhookUrlFile;
@@ -674,6 +688,9 @@ in
               titles
               ;
             topic_file = noroshiCfg.ntfy.topicFile;
+          }
+          // lib.optionalAttrs (noroshiCfg.ntfy.click != null) {
+            inherit (noroshiCfg.ntfy) click;
           };
         }
       );

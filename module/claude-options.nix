@@ -972,6 +972,77 @@ in
         default = { };
         description = "ntfy title per event; an event not listed gets noroshi's headline.";
       };
+
+      click = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "URL opened when the ntfy notification is tapped. Null ⇒ none.";
+      };
+    };
+
+    render = {
+      detail = mkOption {
+        type = types.enum [
+          "minimal"
+          "context"
+        ];
+        default = "minimal";
+        description = ''
+          `minimal`: host, event and a short session label only.
+          `context`: adds the project and branch, what Claude asked for
+          (Notification) and the start of Claude's last reply (Stop). That text
+          leaves the machine for the configured backends.
+        '';
+      };
+
+      markdown = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Render the body as markdown (quote block plus a code-styled footer).";
+      };
+
+      saidMax = mkOption {
+        type = types.ints.between 40 4000;
+        default = 280;
+        description = "Maximum characters of Claude's text quoted in the body.";
+      };
+
+      project = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Name the repo (git root, else the working directory) in the title and footer.";
+      };
+
+      branch = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Name the current git branch in the footer.";
+      };
+
+      session = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Show the short session label in the footer.";
+      };
+
+      quoteClaude = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Quote Claude's message or last reply in the body (context detail only).";
+      };
+
+      headlines = mkOption {
+        type = types.attrsOf types.str;
+        default = { };
+        example = {
+          Stop = "Done";
+          "Notification:permission_prompt" = "Approve me";
+        };
+        description = ''
+          Headline overrides keyed by event, or `Event:notification_type`.
+          Merged over noroshi's built-in headlines.
+        '';
+      };
     };
   };
 

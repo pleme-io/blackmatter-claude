@@ -2209,11 +2209,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791293097,
-        "narHash": "sha256-KJHNXzFMAwyp7TjVeJh6VstrrHKkz3NXNnwiGvfHIHA=",
+        "lastModified": 1791307306,
+        "narHash": "sha256-IG+cTXdb+T8ju1SraaMdf1K30ZEqM1AAlJmnPloJDHc=",
         "owner": "pleme-io",
         "repo": "noroshi",
-        "rev": "4210bc0fcd6448f36c2019c09c926d8dcdc0a540",
+        "rev": "bb7729a86e42589fd8ea909b67f4f152a15a4013",
         "type": "github"
       },
       "original": {

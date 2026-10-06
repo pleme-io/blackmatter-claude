@@ -58,7 +58,8 @@ blackmatter.components.claude
 │   ├── checkTools      → PreToolUse `guardrail check` matcher (Bash + every tool a typed rule names)
 │   └── hookRegistrations → one `guardrail hook <Event>` per event with actions
 ├── noroshi.*           → ~/.config/noroshi/noroshi.yaml + `noroshi hook` per signalled event
-│   └── ntfy.{server,topicFile,priorities,tags,titles}
+│   ├── ntfy.{server,topicFile,priorities,tags,titles,click}
+│   └── render.{detail,markdown,saidMax,project,branch,session,quoteClaude,headlines}
 ├── keybindings.*       → ~/.claude/keybindings.json
 ├── agents.*            → ~/.claude/agents/*.md
 ├── outputStyles.*      → ~/.claude/output-styles/*.md
