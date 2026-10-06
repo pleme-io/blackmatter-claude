@@ -737,6 +737,8 @@ in
     # type-owned-by-binary seam, opposite axis (what the operator must be
     # TOLD, not what the agent must not DO).
     (mkIf (cfg.enable && noroshiCfg.enable) {
+      home.packages = [ pkgs.noroshi ];
+
       home.file.".config/noroshi/noroshi.yaml".text = builtins.toJSON (
         {
           mention = noroshiCfg.mention;
