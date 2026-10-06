@@ -563,6 +563,7 @@ in
           disabledRules = guardrailCfg.disabledRules;
           toolInputLimits = guardrailCfg.toolInputLimits;
           changeWindows = guardrailCfg.changeWindows;
+          prefilter = guardrailCfg.prefilter;
         };
       }
       //

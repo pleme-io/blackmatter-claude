@@ -1073,6 +1073,29 @@ in
       default = [ ];
       description = "Change windows: a guardrail rule carrying a `window` tag blocks unless a window with that tag is open now.";
     };
+
+    prefilter = {
+      extraCommands = mkOption {
+        type = types.listOf types.str;
+        default = [ ];
+        description = "Commands added to guardrail's prefilter (rules/prefilter.yaml); a rule whose command is not listed never fires.";
+      };
+      removedCommands = mkOption {
+        type = types.listOf types.str;
+        default = [ ];
+        description = "Default prefilter commands to drop.";
+      };
+      extraKeywords = mkOption {
+        type = types.listOf types.str;
+        default = [ ];
+        description = "Keywords (ASCII case-insensitive, anywhere in the command) that send a command to the rule engine.";
+      };
+      extraMarkers = mkOption {
+        type = types.listOf types.str;
+        default = [ ];
+        description = "Byte sequences that send a command to the rule engine.";
+      };
+    };
   };
 
   # ══════════════════════════════════════════════════════════════════════
