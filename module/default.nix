@@ -67,6 +67,7 @@ let
               disabledRules
               toolInputLimits
               changeWindows
+              changeWindowFiles
               prefilter
               ;
           }

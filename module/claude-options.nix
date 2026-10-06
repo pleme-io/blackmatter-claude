@@ -969,6 +969,12 @@ in
       description = "Change windows: a guardrail rule carrying a `window` tag blocks unless a window with that tag is open now.";
     };
 
+    changeWindowFiles = mkOption {
+      type = types.listOf types.str;
+      default = [ ];
+      description = "Files of change windows (`{changeWindows: [...]}`) written at run time, e.g. synced from approved tickets; guardrail merges them with changeWindows on every windowed block. A missing file opens nothing.";
+    };
+
     prefilter = {
       extraCommands = mkOption {
         type = types.listOf types.str;
