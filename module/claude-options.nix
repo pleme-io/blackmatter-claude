@@ -873,135 +873,30 @@ in
       description = "Enable guardrail defensive hooks for Bash tool calls.";
     };
 
-    categories = {
-      filesystem = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Block destructive filesystem commands (rm -rf /, mkfs).";
-      };
-      git = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Block destructive git commands (force push main, reset --hard).";
-      };
-      database = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Block destructive SQL (DROP TABLE, TRUNCATE, DELETE without WHERE).";
-      };
-      kubernetes = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Block destructive K8s commands (delete namespace, delete --all).";
-      };
-      nix = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Warn on Nix garbage collection.";
-      };
-      docker = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Warn on Docker prune commands.";
-      };
-      secrets = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Warn on secret exposure patterns.";
-      };
-      terraform = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Block destructive Terraform/Pulumi/Ansible commands.";
-      };
-      cloud = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Block destructive cloud CLI commands (AWS, GCP, Azure).";
-      };
-      flux = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Block destructive FluxCD/GitOps commands.";
-      };
-      akeyless = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Block destructive Akeyless CLI commands.";
-      };
-      process = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Block destructive process/system commands.";
-      };
-      network = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Block destructive network/firewall commands.";
-      };
-      nosql = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Block destructive NoSQL/cache commands.";
-      };
+    categories = mkOption {
+      type = types.attrsOf types.bool;
+      default = { };
+      description = "Turn a rule category off (`<category> = false`); a category not listed is on. Categories are whatever lowercase names the suites use.";
     };
 
-    suites = {
-      aws = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Deploy AWS CLI guardrail suite.";
-      };
-      gcp = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Deploy GCP CLI guardrail suite.";
-      };
-      azure = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Deploy Azure CLI guardrail suite.";
-      };
-      akeyless = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Deploy Akeyless CLI guardrail suite.";
-      };
-      process = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Deploy process/system guardrail suite.";
-      };
-      network = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Deploy network/firewall guardrail suite.";
-      };
-      nosql = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Deploy NoSQL/cache guardrail suite.";
-      };
-      sql = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Deploy SQL guardrail suite (all engines + migration tools).";
-      };
-      aws-generated = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Deploy auto-generated AWS guardrail suite (2,250 rules from 298 services).";
-      };
-      akeyless-generated = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Deploy auto-generated Akeyless guardrail suite from OpenAPI spec.";
-      };
-      pleme-doctrine = mkOption {
-        type = types.bool;
-        default = true;
-        description = "Deploy the pleme-io doctrine suite: org-CLAUDE.md absolutes expressible as a Bash pattern (in-place stream edits of structured files, hand-run tofu/terraform apply, docker build instead of Nix dockerTools). Two rules BLOCK (`sed-inplace-structured-file` and its chained variant — an in-place stream edit of a .nix/.yaml/.toml/.rs/.json file); the other three warn. Shadow-first applies to the warn tier only; the structured-file rules are already enforcing.";
-      };
+    ruleSuites = mkOption {
+      type = types.attrsOf (
+        types.submodule {
+          options = {
+            enable = mkOption {
+              type = types.bool;
+              default = true;
+              description = "Deploy this suite.";
+            };
+            source = mkOption {
+              type = types.path;
+              description = "The suite's YAML file (a list of guardrail rules).";
+            };
+          };
+        }
+      );
+      default = { };
+      description = "Rule suites deployed to ~/.config/guardrail/rules.d/<name>.yaml. The generic suites come from guardrail; an organisation's suites are contributed by its blackmatter-* module. Every suite and the rendered config pass `guardrail validate` at rebuild, or the rebuild stops.";
     };
 
     extraRules = mkOption {

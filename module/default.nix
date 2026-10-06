@@ -44,6 +44,50 @@ let
   mcpPkgsCfg = cfg.mcpPackages;
   skillsCfg = cfg.skills;
   guardrailCfg = cfg.guardrail;
+  genericGuardrailSuites = [
+    "aws"
+    "aws-generated"
+    "azure"
+    "gcp"
+    "network"
+    "nosql"
+    "process"
+    "sql"
+  ];
+  enabledGuardrailSuites = lib.filterAttrs (_: s: s.enable) guardrailCfg.ruleSuites;
+  guardrailStage = pkgs.linkFarm "guardrail-config" (
+    [
+      {
+        name = "guardrail/guardrail.yaml";
+        path = pkgs.writeText "guardrail.yaml" (
+          builtins.toJSON {
+            inherit (guardrailCfg)
+              categories
+              extraRules
+              disabledRules
+              toolInputLimits
+              changeWindows
+              prefilter
+              ;
+          }
+        );
+      }
+    ]
+    ++ lib.mapAttrsToList (n: s: {
+      name = "guardrail/rules.d/${n}.yaml";
+      path = s.source;
+    }) enabledGuardrailSuites
+  );
+  guardrailGated =
+    pkgs.runCommand "guardrail-config-gated"
+      {
+        nativeBuildInputs = [ pkgs.guardrail ];
+        passthru.gateIsThePayload = true;
+      }
+      ''
+        XDG_CONFIG_HOME=${guardrailStage} XDG_CACHE_HOME=$TMPDIR guardrail validate
+        cp -RL ${guardrailStage}/guardrail $out
+      '';
   noroshiCfg = cfg.noroshi;
   skillUsageCfg = cfg.skillUsage;
   themeCfg = cfg.theme;
@@ -540,55 +584,16 @@ in
 
     # Guardrail → defensive hooks for Bash tool calls
     (mkIf (cfg.enable && guardrailCfg.enable) {
-      # Generate shikumi config + deploy rule suites
+      blackmatter.components.claude.guardrail.ruleSuites = lib.genAttrs genericGuardrailSuites (n: {
+        source = lib.mkDefault "${pkgs.guardrail-rules}/${n}.yaml";
+      });
+
       home.file = {
-        ".config/guardrail/guardrail.yaml".text = builtins.toJSON {
-          categories = {
-            filesystem = guardrailCfg.categories.filesystem;
-            git = guardrailCfg.categories.git;
-            database = guardrailCfg.categories.database;
-            kubernetes = guardrailCfg.categories.kubernetes;
-            nix = guardrailCfg.categories.nix;
-            docker = guardrailCfg.categories.docker;
-            secrets = guardrailCfg.categories.secrets;
-            terraform = guardrailCfg.categories.terraform;
-            cloud = guardrailCfg.categories.cloud;
-            flux = guardrailCfg.categories.flux;
-            akeyless = guardrailCfg.categories.akeyless;
-            process = guardrailCfg.categories.process;
-            network = guardrailCfg.categories.network;
-            nosql = guardrailCfg.categories.nosql;
-          };
-          extraRules = guardrailCfg.extraRules;
-          disabledRules = guardrailCfg.disabledRules;
-          toolInputLimits = guardrailCfg.toolInputLimits;
-          changeWindows = guardrailCfg.changeWindows;
-          prefilter = guardrailCfg.prefilter;
-        };
+        ".config/guardrail/guardrail.yaml".source = "${guardrailGated}/guardrail.yaml";
       }
-      //
-        lib.foldl'
-          (
-            acc: suite:
-            acc
-            // lib.optionalAttrs guardrailCfg.suites.${suite} {
-              ".config/guardrail/rules.d/${suite}.yaml".source = "${pkgs.guardrail-rules}/${suite}.yaml";
-            }
-          )
-          { }
-          [
-            "aws"
-            "gcp"
-            "azure"
-            "akeyless"
-            "process"
-            "network"
-            "nosql"
-            "sql"
-            "aws-generated"
-            "akeyless-generated"
-            "pleme-doctrine"
-          ];
+      // lib.mapAttrs' (
+        n: _: lib.nameValuePair ".config/guardrail/rules.d/${n}.yaml" { source = "${guardrailGated}/rules.d/${n}.yaml"; }
+      ) enabledGuardrailSuites;
 
       # PreToolUse hooks:
       #   • Bash       → guardrail check (block destructive commands)
