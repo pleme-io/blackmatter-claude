@@ -53,6 +53,10 @@ blackmatter.components.claude
 │   ├── enabled, filesystem.{allowWrite,denyWrite,denyRead}
 │   └── network.{allowUnixSockets,allowedDomains,...}
 ├── hooks.*             → ~/.claude/settings.json
+├── guardrail.*         → ~/.config/guardrail/ + PreToolUse/PostToolUse hooks
+│   └── hooks.<Event>   → guardrail.yaml `hooks:` + one `guardrail hook <Event>` per event with actions
+├── noroshi.*           → ~/.config/noroshi/noroshi.yaml + `noroshi hook` per signalled event
+│   └── ntfy.{server,topicFile,priorities,tags,titles}
 ├── keybindings.*       → ~/.claude/keybindings.json
 ├── agents.*            → ~/.claude/agents/*.md
 ├── outputStyles.*      → ~/.claude/output-styles/*.md

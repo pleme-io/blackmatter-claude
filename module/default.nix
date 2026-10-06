@@ -20,7 +20,11 @@
 # Permissions:        https://docs.anthropic.com/en/docs/claude-code/permissions
 # Sandbox:            https://docs.anthropic.com/en/docs/claude-code/sandboxing
 #
-{ claude-code, skill-lint }:
+{
+  claude-code,
+  skill-lint,
+  guardrailSrc,
+}:
 {
   lib,
   config,
@@ -44,6 +48,23 @@ let
   mcpPkgsCfg = cfg.mcpPackages;
   skillsCfg = cfg.skills;
   guardrailCfg = cfg.guardrail;
+  hookEvents = builtins.fromJSON (builtins.readFile "${guardrailSrc}/hooks/events.json");
+  guardrailHooks = lib.filterAttrs (_: actions: actions != [ ]) guardrailCfg.hooks;
+  renderGuardrailAction =
+    a:
+    {
+      inherit (a) action;
+    }
+    // lib.optionalAttrs (a.matcher != null) { inherit (a) matcher; }
+    // lib.optionalAttrs (a.command != [ ]) { inherit (a) command; };
+  guardrailHookMatcher =
+    event: actions:
+    let
+      subject = (lib.findFirst (e: e.name == event) { subject = null; } hookEvents).subject;
+      matchers = map (a: a.matcher) actions;
+      unscoped = lib.any (m: m == null || m == "" || m == "*") matchers;
+    in
+    if subject == null || unscoped then null else lib.concatStringsSep "|" (lib.unique matchers);
   genericGuardrailSuites = [
     "aws"
     "aws-generated"
@@ -60,17 +81,22 @@ let
       {
         name = "guardrail/guardrail.yaml";
         path = pkgs.writeText "guardrail.yaml" (
-          builtins.toJSON {
-            inherit (guardrailCfg)
-              categories
-              extraRules
-              disabledRules
-              toolInputLimits
-              changeWindows
-              changeWindowFiles
-              prefilter
-              ;
-          }
+          builtins.toJSON (
+            {
+              inherit (guardrailCfg)
+                categories
+                extraRules
+                disabledRules
+                toolInputLimits
+                changeWindows
+                changeWindowFiles
+                prefilter
+                ;
+            }
+            // lib.optionalAttrs (guardrailHooks != { }) {
+              hooks = lib.mapAttrs (_: map renderGuardrailAction) guardrailHooks;
+            }
+          )
         );
       }
     ]
@@ -98,7 +124,7 @@ let
   # ── Helpers ────────────────────────────────────────────────────────────
 
   # Import typed options from separate file
-  claudeOpts = import ./claude-options.nix { inherit lib; };
+  claudeOpts = import ./claude-options.nix { inherit lib hookEvents; };
 
   # Conditional attribute helpers (also available via substrate hm-typed-config-helpers.nix)
   optAttr = name: value: optionalAttrs (value != null) { ${name} = value; };
@@ -680,35 +706,37 @@ in
       '';
     })
 
+    # Generic hooks → `guardrail hook <Event>`, registered only for an event
+    # that has at least one action, so an unconfigured event costs nothing.
+    # The registrations above stay as they are: they are today's behaviour,
+    # byte-for-byte, and each is also expressible as an action here.
+    (mkIf (cfg.enable && guardrailCfg.enable && guardrailHooks != { }) {
+      blackmatter.components.claude.hooks = lib.mapAttrs (
+        event: actions:
+        let
+          matcher = guardrailHookMatcher event actions;
+        in
+        [
+          (
+            {
+              hooks = [
+                {
+                  type = "command";
+                  command = "${pkgs.guardrail}/bin/guardrail hook ${event}";
+                }
+              ];
+            }
+            // lib.optionalAttrs (matcher != null) { inherit matcher; }
+          )
+        ]
+      ) guardrailHooks;
+    })
+
     # Noroshi → signal-fire alerts when the agent is done or waiting.
     # The guardrail block's mirror image: same file-owned-by-module /
     # type-owned-by-binary seam, opposite axis (what the operator must be
     # TOLD, not what the agent must not DO).
     (mkIf (cfg.enable && noroshiCfg.enable) {
-      # ★ The package is DEFERRED, the option surface is not — see the
-      # commented-out `noroshi` input in this repo's flake.nix. Enabling
-      # the feature before `pleme-io/noroshi` exists would otherwise fail
-      # deep in the hook list with `attribute 'noroshi' missing`, naming
-      # neither the cause nor the fix. This says both.
-      assertions = [
-        {
-          assertion = pkgs ? noroshi;
-          message = ''
-            blackmatter.components.claude.noroshi.enable = true, but the
-            `noroshi` package is not in pkgs.
-
-            The flake input is deliberately deferred: `pleme-io/noroshi`
-            does not exist yet (declared in pangea-architectures' org.yaml
-            at 9531bce, awaiting the operator's reconcile). Declaring the
-            input before the repo exists made every consumer's eval fail
-            with a 401, fleet-wide.
-
-            Either leave this off until the repo is created and the input
-            is restored, or restore both the input and the overlay entry
-            in blackmatter-claude/flake.nix if it now exists.
-          '';
-        }
-      ];
       home.file.".config/noroshi/noroshi.yaml".text = builtins.toJSON (
         {
           mention = noroshiCfg.mention;
@@ -717,6 +745,17 @@ in
         }
         // lib.optionalAttrs (noroshiCfg.webhookUrlFile != null) {
           webhook_url_file = noroshiCfg.webhookUrlFile;
+        }
+        // lib.optionalAttrs (noroshiCfg.ntfy.topicFile != null) {
+          ntfy = {
+            inherit (noroshiCfg.ntfy)
+              server
+              priorities
+              tags
+              titles
+              ;
+            topic_file = noroshiCfg.ntfy.topicFile;
+          };
         }
       );
 

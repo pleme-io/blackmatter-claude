@@ -4,9 +4,41 @@
 # Extracted from default.nix for clarity and maintainability.
 #
 # Sources: https://docs.anthropic.com/en/docs/claude-code/settings
-{ lib, ... }:
+{ lib, hookEvents, ... }:
 with lib;
 let
+  guardrailHookActionOpts =
+    { config, ... }:
+    {
+      options = {
+        action = mkOption {
+          type = types.enum [
+            "check"
+            "inputLimit"
+            "searchNudge"
+            "searchAdvise"
+            "mintAdvise"
+            "exec"
+          ];
+          description = "What the action does.";
+        };
+        matcher = mkOption {
+          type = types.nullOr types.str;
+          default = null;
+          description = "Claude Code matcher syntax: null, empty or `*` matches all, `A|B` exact names, anything else a regex.";
+        };
+        command = mkOption {
+          type =
+            if config.action == "exec" then
+              types.addCheck (types.listOf types.str) (c: c != [ ])
+            else
+              types.addCheck (types.listOf types.str) (c: c == [ ]);
+          default = [ ];
+          description = "argv for an exec action (non-empty); must be empty for every other action.";
+        };
+      };
+    };
+
   # ── Hook Entry Submodule ────────────────────────────────────────────
   # Typed hook entry with freeformType for forward compatibility.
   hookEntryOpts = { ... }: {
@@ -997,6 +1029,46 @@ in
         description = "Byte sequences that send a command to the rule engine.";
       };
     };
+
+    hooks = mkOption {
+      type = types.submodule {
+        options = lib.listToAttrs (
+          map (
+            e:
+            lib.nameValuePair e.name (mkOption {
+              type = types.listOf (types.submodule guardrailHookActionOpts);
+              default = [ ];
+              description =
+                "guardrail actions for ${e.name}, run in order by `guardrail hook ${e.name}`."
+                + lib.optionalString (e.subject != null) " An action's matcher is tested against `${e.subject}`.";
+            })
+          ) hookEvents
+        );
+      };
+      default = { };
+      example = {
+        Stop = [
+          {
+            action = "exec";
+            command = [
+              "/path/to/tool"
+              "--flag"
+            ];
+          }
+        ];
+      };
+      description = ''
+        Generic hooks, one option per Claude Code hook event (the table is
+        guardrail's hooks/events.json). Every event starts empty, and an empty
+        event registers no hook at all, so it costs nothing. An event with
+        actions registers one `guardrail hook <Event>` whose matcher is the
+        union of its actions' matchers.
+
+        Actions: check (the rule engine), inputLimit (toolInputLimits),
+        searchNudge, searchAdvise, mintAdvise, and exec (runs `command` with
+        the hook JSON on stdin and passes its decision through).
+      '';
+    };
   };
 
   # ══════════════════════════════════════════════════════════════════════
@@ -1068,6 +1140,47 @@ in
         Only events set to `signal` get a hook wired at all, so a silent
         event costs nothing at run time.
       '';
+    };
+
+    ntfy = {
+      server = mkOption {
+        type = types.str;
+        default = "https://ntfy.sh";
+        description = "ntfy server base URL.";
+      };
+
+      topicFile = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "/Users/you/.config/noroshi/ntfy-topic";
+        description = ''
+          Path to a file holding the ntfy topic. On a public server the topic
+          is the only credential, so it is a secret: read at RUN time, never
+          rendered into the Nix store. Null ⇒ the ntfy backend is off.
+        '';
+      };
+
+      priorities = mkOption {
+        type = types.attrsOf (types.ints.between 1 5);
+        default = { };
+        example = {
+          Stop = 5;
+          Notification = 4;
+        };
+        description = "ntfy priority per event (1 min … 5 urgent); an event not listed gets 3.";
+      };
+
+      tags = mkOption {
+        type = types.attrsOf (types.listOf types.str);
+        default = { };
+        description = "ntfy tags per event (emoji shortcodes render as icons).";
+      };
+
+      titles = mkOption {
+        type = types.attrsOf types.str;
+        default = { };
+        description = "ntfy title per event; an event not listed gets noroshi's headline.";
+      };
     };
   };
 

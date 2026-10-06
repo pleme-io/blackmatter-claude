@@ -1667,11 +1667,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790505005,
-        "narHash": "sha256-TUgtRkn3hnOaNKL884kki+jN9v1SCAYvYyZIbW70MEQ=",
+        "lastModified": 1791292842,
+        "narHash": "sha256-xfZjAT3+gDTAGem/fFZoe/hLybKJirEUR+RvvcGXPaw=",
         "owner": "pleme-io",
         "repo": "guardrail",
-        "rev": "0c11c44636b973e8ee329551403f15ec45c3ac1d",
+        "rev": "272799c3fe5171f1dd75c7b088e0d490d05455ce",
         "type": "github"
       },
       "original": {
@@ -2202,6 +2202,26 @@
         "type": "github"
       }
     },
+    "noroshi": {
+      "inputs": {
+        "substrate": [
+          "substrate"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791293097,
+        "narHash": "sha256-KJHNXzFMAwyp7TjVeJh6VstrrHKkz3NXNnwiGvfHIHA=",
+        "owner": "pleme-io",
+        "repo": "noroshi",
+        "rev": "4210bc0fcd6448f36c2019c09c926d8dcdc0a540",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pleme-io",
+        "repo": "noroshi",
+        "type": "github"
+      }
+    },
     "pre-commit-hooks": {
       "inputs": {
         "flake-compat": [
@@ -2372,6 +2392,7 @@
           "substrate",
           "nixpkgs"
         ],
+        "noroshi": "noroshi",
         "skill-lint": "skill-lint",
         "substrate": "substrate"
       }
