@@ -53,8 +53,10 @@ blackmatter.components.claude
 │   ├── enabled, filesystem.{allowWrite,denyWrite,denyRead}
 │   └── network.{allowUnixSockets,allowedDomains,...}
 ├── hooks.*             → ~/.claude/settings.json
-├── guardrail.*         → ~/.config/guardrail/ + PreToolUse/PostToolUse hooks
-│   └── hooks.<Event>   → guardrail.yaml `hooks:` + one `guardrail hook <Event>` per event with actions
+├── guardrail.*         → declared by guardrail's own HM module (imported; the binary owns the type)
+│   │                     which renders ~/.config/guardrail/; this module registers the hooks:
+│   ├── checkTools      → PreToolUse `guardrail check` matcher (Bash + every tool a typed rule names)
+│   └── hookRegistrations → one `guardrail hook <Event>` per event with actions
 ├── noroshi.*           → ~/.config/noroshi/noroshi.yaml + `noroshi hook` per signalled event
 │   └── ntfy.{server,topicFile,priorities,tags,titles}
 ├── keybindings.*       → ~/.claude/keybindings.json

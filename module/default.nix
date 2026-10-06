@@ -23,7 +23,7 @@
 {
   claude-code,
   skill-lint,
-  guardrailSrc,
+  guardrailModule,
 }:
 {
   lib,
@@ -48,73 +48,6 @@ let
   mcpPkgsCfg = cfg.mcpPackages;
   skillsCfg = cfg.skills;
   guardrailCfg = cfg.guardrail;
-  hookEvents = builtins.fromJSON (builtins.readFile "${guardrailSrc}/hooks/events.json");
-  guardrailHooks = lib.filterAttrs (_: actions: actions != [ ]) guardrailCfg.hooks;
-  renderGuardrailAction =
-    a:
-    {
-      inherit (a) action;
-    }
-    // lib.optionalAttrs (a.matcher != null) { inherit (a) matcher; }
-    // lib.optionalAttrs (a.command != [ ]) { inherit (a) command; };
-  guardrailHookMatcher =
-    event: actions:
-    let
-      subject = (lib.findFirst (e: e.name == event) { subject = null; } hookEvents).subject;
-      matchers = map (a: a.matcher) actions;
-      unscoped = lib.any (m: m == null || m == "" || m == "*") matchers;
-    in
-    if subject == null || unscoped then null else lib.concatStringsSep "|" (lib.unique matchers);
-  genericGuardrailSuites = [
-    "aws"
-    "aws-generated"
-    "azure"
-    "gcp"
-    "network"
-    "nosql"
-    "process"
-    "sql"
-  ];
-  enabledGuardrailSuites = lib.filterAttrs (_: s: s.enable) guardrailCfg.ruleSuites;
-  guardrailStage = pkgs.linkFarm "guardrail-config" (
-    [
-      {
-        name = "guardrail/guardrail.yaml";
-        path = pkgs.writeText "guardrail.yaml" (
-          builtins.toJSON (
-            {
-              inherit (guardrailCfg)
-                categories
-                extraRules
-                disabledRules
-                toolInputLimits
-                changeWindows
-                changeWindowFiles
-                prefilter
-                ;
-            }
-            // lib.optionalAttrs (guardrailHooks != { }) {
-              hooks = lib.mapAttrs (_: map renderGuardrailAction) guardrailHooks;
-            }
-          )
-        );
-      }
-    ]
-    ++ lib.mapAttrsToList (n: s: {
-      name = "guardrail/rules.d/${n}.yaml";
-      path = s.source;
-    }) enabledGuardrailSuites
-  );
-  guardrailGated =
-    pkgs.runCommand "guardrail-config-gated"
-      {
-        nativeBuildInputs = [ pkgs.guardrail ];
-        passthru.gateIsThePayload = true;
-      }
-      ''
-        XDG_CONFIG_HOME=${guardrailStage} XDG_CACHE_HOME=$TMPDIR guardrail validate
-        cp -RL ${guardrailStage}/guardrail $out
-      '';
   noroshiCfg = cfg.noroshi;
   skillUsageCfg = cfg.skillUsage;
   themeCfg = cfg.theme;
@@ -124,7 +57,7 @@ let
   # ── Helpers ────────────────────────────────────────────────────────────
 
   # Import typed options from separate file
-  claudeOpts = import ./claude-options.nix { inherit lib hookEvents; };
+  claudeOpts = import ./claude-options.nix { inherit lib; };
 
   # Conditional attribute helpers (also available via substrate hm-typed-config-helpers.nix)
   optAttr = name: value: optionalAttrs (value != null) { ${name} = value; };
@@ -485,6 +418,7 @@ let
 in
 {
   imports = [
+    guardrailModule
     ./desktop/home.nix
     ./tool-shell.nix
   ];
@@ -609,32 +543,23 @@ in
         bundledFiles // extraFiles;
     })
 
-    # Guardrail → defensive hooks for Bash tool calls
+    # Guardrail → Claude Code hook registrations. guardrail's own module
+    # (imported above) owns the option types, ~/.config/guardrail and the
+    # validate gate; this block only registers its subcommands.
     (mkIf (cfg.enable && guardrailCfg.enable) {
-      blackmatter.components.claude.guardrail.ruleSuites = lib.genAttrs genericGuardrailSuites (n: {
-        source = lib.mkDefault "${pkgs.guardrail-rules}/${n}.yaml";
-      });
-
-      home.file = {
-        ".config/guardrail/guardrail.yaml".source = "${guardrailGated}/guardrail.yaml";
-      }
-      // lib.mapAttrs' (
-        n: _: lib.nameValuePair ".config/guardrail/rules.d/${n}.yaml" { source = "${guardrailGated}/rules.d/${n}.yaml"; }
-      ) enabledGuardrailSuites;
-
       # PreToolUse hooks:
-      #   • Bash       → guardrail check (block destructive commands)
+      #   • checkTools → guardrail check (Bash, plus every tool a typed rule names)
       #   • Grep|Glob  → guardrail search-nudge (advisory-only; steers toward
       #                  codesearch — mcp__codesearch__search_exact for
       #                  regex/literal, semantic_search for intent. Never
       #                  denies today, see guardrail's promote-to-deny TODO).
       blackmatter.components.claude.hooks.PreToolUse = [
         {
-          matcher = "Bash";
+          matcher = lib.concatStringsSep "|" guardrailCfg.checkTools;
           hooks = [
             {
               type = "command";
-              command = "${pkgs.guardrail}/bin/guardrail check";
+              command = "${guardrailCfg.package}/bin/guardrail check";
             }
           ];
         }
@@ -643,7 +568,7 @@ in
           hooks = [
             {
               type = "command";
-              command = "${pkgs.guardrail}/bin/guardrail search-nudge";
+              command = "${guardrailCfg.package}/bin/guardrail search-nudge";
             }
           ];
         }
@@ -655,7 +580,7 @@ in
         hooks = [
           {
             type = "command";
-            command = "${pkgs.guardrail}/bin/guardrail input-limit";
+            command = "${guardrailCfg.package}/bin/guardrail input-limit";
           }
         ];
       };
@@ -685,7 +610,7 @@ in
           hooks = [
             {
               type = "command";
-              command = "${pkgs.guardrail}/bin/guardrail search-advise";
+              command = "${guardrailCfg.package}/bin/guardrail search-advise";
             }
           ];
         }
@@ -694,42 +619,34 @@ in
           hooks = [
             {
               type = "command";
-              command = "${pkgs.guardrail}/bin/guardrail mint-advise";
+              command = "${guardrailCfg.package}/bin/guardrail mint-advise";
             }
           ];
         }
       ];
-
-      # Pre-compile rules cache after deployment for fast check (10ms vs 217ms)
-      home.activation.guardrail-compile = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        run ${pkgs.guardrail}/bin/guardrail compile
-      '';
     })
 
     # Generic hooks → `guardrail hook <Event>`, registered only for an event
     # that has at least one action, so an unconfigured event costs nothing.
     # The registrations above stay as they are: they are today's behaviour,
     # byte-for-byte, and each is also expressible as an action here.
-    (mkIf (cfg.enable && guardrailCfg.enable && guardrailHooks != { }) {
+    (mkIf (cfg.enable && guardrailCfg.enable) {
       blackmatter.components.claude.hooks = lib.mapAttrs (
-        event: actions:
-        let
-          matcher = guardrailHookMatcher event actions;
-        in
+        event: matcher:
         [
           (
             {
               hooks = [
                 {
                   type = "command";
-                  command = "${pkgs.guardrail}/bin/guardrail hook ${event}";
+                  command = "${guardrailCfg.package}/bin/guardrail hook ${event}";
                 }
               ];
             }
             // lib.optionalAttrs (matcher != null) { inherit matcher; }
           )
         ]
-      ) guardrailHooks;
+      ) guardrailCfg.hookRegistrations;
     })
 
     # Noroshi → signal-fire alerts when the agent is done or waiting.

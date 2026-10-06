@@ -44,7 +44,7 @@
       description = "Claude Code integration — LSP, MCP servers, skills, guardrails";
       modules.homeManager = import ./module {
         inherit claude-code skill-lint;
-        guardrailSrc = guardrail;
+        guardrailModule = guardrail.homeManagerModules.default;
       };
       modules.darwin = ./module/desktop/darwin.nix;
       overlay = final: prev: {
