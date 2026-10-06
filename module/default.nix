@@ -562,6 +562,7 @@ in
           extraRules = guardrailCfg.extraRules;
           disabledRules = guardrailCfg.disabledRules;
           toolInputLimits = guardrailCfg.toolInputLimits;
+          changeWindows = guardrailCfg.changeWindows;
         };
       }
       //

@@ -1046,6 +1046,33 @@ in
       default = [ ];
       description = "Per-tool field length limits enforced by `guardrail input-limit`.";
     };
+
+    changeWindows = mkOption {
+      type = types.listOf (
+        types.submodule {
+          options = {
+            name = mkOption {
+              type = types.str;
+              description = "Window name shown in guardrail's messages.";
+            };
+            tag = mkOption {
+              type = types.str;
+              description = "Rules whose `window` equals this tag are allowed while the window is open.";
+            };
+            start = mkOption {
+              type = types.strMatching "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z";
+              description = "Start, UTC, RFC 3339 with Z.";
+            };
+            end = mkOption {
+              type = types.strMatching "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z";
+              description = "End, UTC, RFC 3339 with Z; exclusive.";
+            };
+          };
+        }
+      );
+      default = [ ];
+      description = "Change windows: a guardrail rule carrying a `window` tag blocks unless a window with that tag is open now.";
+    };
   };
 
   # ══════════════════════════════════════════════════════════════════════
