@@ -13,3 +13,19 @@
 | Tree-hash gate FAILED at execute | The equivalence ledger didn't seal. Run `carve prove` and fix before executing. |
 | Existing branch collision | Pass `--force` to recreate, or delete the stale branch. |
 | Tracker/`gh` not authenticated | `gh auth status` must succeed before a pushing execute; tracker env only matters for ticket-backed scopes. |
+
+## The pitfall a carve cannot see: the units the branch never touched
+
+A stack carved from what the branch happens to touch is complete about the
+branch and silent about the fleet. It covers the unit someone started with and
+leaves every other consumer on the old behaviour, and the gap is invisible
+precisely because every PR in the stack looks finished and every gate is green.
+
+So for a change that fans out, glob the consumers from the REPO before planning
+scopes — every values file, every leaf, every caller — and account for each one:
+a scope in the plan, or a line in the common PR naming it excluded and why.
+
+Measured 2026-10-07 in `akeyless-environments`: a RabbitMQ repair shipped as a
+four-PR stack covering one tenant's 3 clusters while 13 ran the chart, so 10
+kept the fault the change existed to fix, and nothing in the stack said so. In
+akeylesslabs this is Edict #23 step 0 (`akeyless-pr-standards`).
