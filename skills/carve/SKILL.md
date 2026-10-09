@@ -3,8 +3,8 @@ name: carve
 description: "Split a monolithic branch into a stack of scoped PRs"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.2.1"
-  last_verified: "2026-06-08"
+  version: "0.3.0"
+  last_verified: "2026-10-09"
   domain_keywords:
     - "carve"
     - "stacked PRs"
@@ -27,6 +27,7 @@ metadata:
     - "restack"
     - "plan.yaml"
     - "stack diagram"
+    - "carve ready"
 ---
 
 # carve — monolithic-branch → scope-aligned stacked-PR delivery
@@ -88,6 +89,8 @@ ticket OR layer boundaries.
 - Doc-only / typo / one-line config changes.
 - Branches where every commit touches the same path globs — there is
   nothing to carve.
+- Environment fan-out shipped as one pinned-rollout PR: not a stack
+  (`carve ready --rollout-ledger`). Scopes and layers still carve.
 
 ## Step 1 — Inspect the situation
 
@@ -160,12 +163,9 @@ Help the operator populate each scope:
    work in another repo). Carve emits a draft PR with one `--allow-empty`
    commit.
 5. **`stack_order`** — lower runs first (closer to the root branch).
-6. **`story_points` / `target_status`** — only meaningful on
-   ticket-backed scopes; carve-jira-sync uses them later. Do not invent the
-   points: derive each scope's estimate by anchoring to already-shipped
-   tickets on the same tracker, per the ticket-flow skill's "Estimating story
-   points from history". A carve fan-out is exactly where feel-based numbers
-   creep in, because several scopes get sized in one pass.
+6. **`story_points` / `target_status`** — ticket-backed scopes only;
+   derive points from already-shipped tickets, never by feel:
+   `references/after-execute.md`.
 
 After editing, re-score:
 
@@ -253,12 +253,13 @@ carve execute -p plan.yaml --resume     # skip steps already Done
 
 Flags, refusals, the ticket field standard and the CI step: `references/after-execute.md`.
 
-## Sidecar state
+## `carve ready` — production window
 
-Carve writes `.carve/safety.yaml`, `.carve/journal.yaml`, and
-`.carve/recovery-<hash>.yaml`. Ensure the repo `.gitignore` carries
-`plan.yaml` and `.carve/` (these are per-run operator state, not
-artifacts to commit).
+Reads only; exit 0/1/2 (ready, not, blind). A stack: `--pr <top PR>`; one
+PR rolled out by pinning: `--rollout-ledger <ledger.json>`. Gates:
+`references/ready.md`.
+
+Sidecar state (`plan.yaml`, `.carve/`): `references/after-execute.md`.
 
 ## Pitfalls to surface to the operator
 
@@ -281,3 +282,4 @@ Symptom → what to tell the operator (prove NOT equivalent, preflight overlap i
 - `references/after-execute.md`: steps 7–10 in full, to undo a carve or act after the PRs open
 - `references/pitfalls.md`: the full table, when a carve command refuses or surprises
 - `references/family.md`: sibling tools and skills (vitrine, cordel, shikumi)
+- `references/ready.md`: `carve ready` gates and its two modes

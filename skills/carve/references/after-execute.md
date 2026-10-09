@@ -60,3 +60,19 @@ content refuses.
 ```
 
 Fails if any parent PR in the stack is still open.
+
+## Sidecar state (moved from SKILL.md 2026-10-09)
+
+Carve writes `.carve/safety.yaml`, `.carve/journal.yaml`, and
+`.carve/recovery-<hash>.yaml`. Ensure the repo `.gitignore` carries
+`plan.yaml` and `.carve/` (these are per-run operator state, not
+artifacts to commit).
+
+## Story points on ticket-backed scopes (moved from SKILL.md 2026-10-09)
+
+`story_points` / `target_status` are only meaningful on ticket-backed scopes;
+carve-jira-sync uses them later. Do not invent the points: derive each
+scope's estimate by anchoring to already-shipped tickets on the same tracker,
+per the ticket-flow skill's "Estimating story points from history". A carve
+fan-out is exactly where feel-based numbers creep in, because several scopes
+get sized in one pass.

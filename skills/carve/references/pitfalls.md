@@ -25,7 +25,12 @@ So for a change that fans out, glob the consumers from the REPO before planning
 scopes — every values file, every leaf, every caller — and account for each one:
 a scope in the plan, or a line in the common PR naming it excluded and why.
 
-Measured 2026-10-07 in `akeyless-environments`: a RabbitMQ repair shipped as a
+Measured 2026-10-07 in a host GitOps repo: a chart repair shipped as a
 four-PR stack covering one tenant's 3 clusters while 13 ran the chart, so 10
-kept the fault the change existed to fix, and nothing in the stack said so. In
-akeylesslabs this is Edict #23 step 0 (`akeyless-pr-standards`).
+kept the fault the change existed to fix, and nothing in the stack said so.
+
+Where the host ships that kind of fan-out as one PR rolled out by pinning, it
+is not a carve at all: every consumer's values go in the one PR (or are named
+excluded, with the reason), the rollout tool derives its units from the PR and
+the live apps, and carve's part is `carve ready --rollout-ledger`
+(`references/ready.md`).
