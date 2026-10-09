@@ -3,7 +3,7 @@ name: carve
 description: "Split a monolithic branch into a stack of scoped PRs"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
   last_verified: "2026-10-09"
   domain_keywords:
     - "carve"
@@ -89,8 +89,9 @@ ticket OR layer boundaries.
 - Doc-only / typo / one-line config changes.
 - Branches where every commit touches the same path globs — there is
   nothing to carve.
-- Environment fan-out shipped as one pinned-rollout PR: not a stack
-  (`carve ready --rollout-ledger`). Scopes and layers still carve.
+- A host that ships one PR per issue: carve only a branch that spans
+  several issues, one scope per issue. An issue's layers stay commits on its
+  PR, and its environments are pins, not PRs (`carve ready --rollout-ledger`).
 
 ## Step 1 — Inspect the situation
 
@@ -246,12 +247,12 @@ carve execute -p plan.yaml --resume     # skip steps already Done
 
 ## Steps 7–10 — after execute
 
-- **Recover (clean undo):** `carve recover -p plan.yaml` deletes exactly the branches carve created (never the source) and restores HEAD.
-- **Tracker sync** (ticket-backed scopes only): `carve jira-sync -p plan.yaml`; layer-only scopes are skipped.
-- **Restack on review feedback:** `carve restack --from <parent-branch>`, then `carve diagram -p plan.yaml`, then push with `--force-with-lease`.
-- **Gate (CI hook):** `carve gate --pr <n> -p plan.yaml` fails while any parent PR is still open.
-
-Flags, refusals, the ticket field standard and the CI step: `references/after-execute.md`.
+Recover (`carve recover`, deletes only carve's branches), tracker sync
+(`carve jira-sync`, ticket scopes only), restack on review feedback
+(`carve restack --from <parent>`, `carve diagram`, push
+`--force-with-lease`) and the CI gate (`carve gate --pr <n>`, red while a
+parent PR is open). Full form, flags, refusals, the ticket field standard
+and the CI step: `references/after-execute.md`.
 
 ## `carve ready` — production window
 

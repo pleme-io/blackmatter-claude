@@ -3,7 +3,7 @@ name: vitrine
 description: "Ship an infra change with pre-merge staging evidence"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
   last_verified: "2026-10-09"
   domain_keywords:
     - "vitrine"
@@ -56,9 +56,11 @@ evidence section in the PR description.
 - Library code that has no runtime
 - Targets the operator can't reach (firewall-blocked, pre-bootstrap)
 - Production outside its gate. A production pin is gated, not forbidden:
-  it goes only through the host's pin tool, inside an open change window,
-  after `carve ready` passes for the PR and the operator says go. Pattern A
-  by Terraform apply never reaches production.
+  only inside an open change window, after `carve ready` passes for the PR.
+  Where the host reserves production to a change-window operator, it is
+  theirs: the pin tool builds the alias with no cluster write, they set the
+  label in the window, and the pin tool adopts the unit for the read.
+  Pattern A by Terraform apply never reaches production.
 
 ## Step 1 — Confirm vitrine-applicability
 
@@ -124,7 +126,11 @@ puts the branch on the cluster.
 **Where the host has a pinned-rollout tool, every pin goes through it.**
 Such a tool writes the key by compare-and-swap, absorbs anyone else's pin
 on the key into a tool-made alias branch instead of reverting it, records
-every write in a ledger, and hands each pin back after the merge. The host
+every write in a ledger, and hands each pin back after the merge. One PR
+per issue: environments are reached by pins, never by more PRs. A shared
+staging unit is held after the trial, never reset: the next user takes our
+change over (their pin absorbs or overrides it), and the tool's finalize
+after the merge is the single hand-back to the default branch. The host
 org's ArgoCD skill names the tool and its verbs. A hand `kubectl label` or
 `kubectl annotate` of a cluster Secret skips all of that; don't.
 
@@ -221,8 +227,9 @@ Compose the evidence into the PR body using the operator reference's
 4. **Apply** — apply output, "Apply complete!" line, ISO timestamp,
    operator identity
 5. **Verification** — three-layer table with literal commands + outputs
-6. **Rollback** — inverse for each apply step + the pin's restore (the pin
-   tool's restore, or Pattern A cleanup)
+6. **Rollback** — inverse for each apply step; for a pin, the withdrawal
+   path used only on a regression (the pin tool's restore, or Pattern A
+   cleanup)
 7. **Tickets**
 
 Push via:
@@ -238,8 +245,9 @@ After the PR merges to master:
 1. If the pin tool was used: run its finalize. It hands every pin back
    (the default branch, the prior holder's branch, or a custody branch
    until that branch contains the merge) and diffs each app against what
-   was staged. A pin left in place stops the cluster following the
-   default branch.
+   was staged. It is the one hand-back; a unit someone took over after it
+   qualified is theirs and is left alone. A pin left in place stops the
+   cluster following the default branch.
 2. If Pattern A was used: remove the annotation from argocd_cluster TF
    and apply. ArgoCD's targetRevision now resolves from the label to
    `master`, which has the merged content. No Service recreate, no
@@ -256,9 +264,10 @@ After the PR merges to master:
   + output
 - "I'll fix the drift after" — block; sweep drift first, then apply,
   then evidence
-- "Pin production now" — block outside the gate; a production pin goes
-  only through the pin tool, inside an open change window, after
-  `carve ready` passes and the operator says go
+- "Pin production now" — block outside the gate; where a change-window
+  operator owns production, prepare the alias and the window steps for them
+- "Reset staging after the trial" — block; hold the unit, the next user
+  takes it over
 - "Pattern A on production", or a `terragrunt apply` of a cluster
   registration while others hold pins on it — block; it reverts their pins
 - "I'll just `kubectl annotate` the cluster Secret" — block; the pin tool,
@@ -283,26 +292,5 @@ or a 5-line code block.
 
 ## Substrate status
 
-v0.1 (2026-05-18) — the `vitrine` Rust CLI exists. Implemented:
-
-- ✅ `vitrine isolate <chart> --branch <feature> --cluster-terragrunt <path>`
-- ✅ `vitrine release <chart> --cluster-terragrunt <path>`
-
-Stubbed (this skill still walks the operator through these manually
-until they're implemented):
-
-- 🚧 `vitrine plan <module>` — capture `terragrunt plan` for evidence
-- 🚧 `vitrine apply <module> --planfile <file>` — planfile-pinned apply with capture
-- 🚧 `vitrine verify --config <path>` — three-layer evidence capture
-- 🚧 `vitrine embed <pr> --evidence <path>` — `gh pr edit --body-file`
-- 🚧 `vitrine ship --config <path> --pr <num>` — full workflow
-
-Other deferred substrate (no work started):
-
-- A `pleme-io/actions-vitrine` reusable workflow that auto-comments on PR
-- A PR template (`.github/PULL_REQUEST_TEMPLATE.md`) lintable by CI
-
-When `vitrine` is installed (`programs.vitrine.enable = true;` in
-home-manager imports `vitrine.homeManagerModules.default` auto-emitted by
-the substrate flake), prefer the binary path for any operation it
-covers. Walk the operator manually for stubbed operations.
+Which `vitrine` verbs are implemented and which are stubbed (walk the
+operator manually for those): `references/substrate-status.md`.
