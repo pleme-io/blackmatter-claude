@@ -16,6 +16,8 @@ metadata:
 
 # Build — Substrate-First Software Construction
 
+> **Images: one factory (operator, 2026-10-16).** Every image is built through the CVE-invariant factory, `pleme-io/hardened-images`' `mkHardenedImageSet` (`lib/mk-hardened-image-set.nix`, typed by `lib/hardened-image-module.nix`), so 0 CVEs at every trivy severity is a build invariant. Hand purification, a per-image suppression, or an image built outside the factory is a red gate; a missing capability is added to the factory. Deviation: `skip-cve-factory:` atop the repo's CLAUDE.md. Doctrine: ★★ CVE-INVARIANT IMAGE FACTORY.
+
 This skill is the entry point for building any software. It discovers substrate
 recipes, matches them to your intent, and either delegates to the right
 domain skill or creates the missing recipe + skill.
