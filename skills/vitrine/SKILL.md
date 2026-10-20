@@ -182,7 +182,7 @@ ApplicationSet picks up the annotation, generates an Application pulling
 from the feature branch. Watch reconciliation:
 
 ```bash
-kubectl --context <target-cluster> get application -n argocd <app-name> \
+k-<target> get application -n argocd <app-name> \
   -o jsonpath='{.status.sync.status}:{.status.health.status}'
 ```
 

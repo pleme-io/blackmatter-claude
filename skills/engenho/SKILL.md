@@ -43,9 +43,11 @@ Kubernetes (and Nomad, and PureRaft) distribution. One design, three axes:
 > **★ STATUS, RE-MEASURED 2026-08-30:** engenho runs the local cluster natively on macOS, with no VM, k3s or kikai in the path. The measurement, and the false note it replaced: `references/status-2026-08-30.md`.
 >
 > **kikai is a k3s VM orchestrator and is NOT engenho.** Pointing kikai's lens
-> at engenho reports a healthy cluster as down. Use `banken` or `kubectl` with
-> the right context — and note the context is named from inside the kubeconfig
-> (`engenho-cid-<hash>`), not from a path.
+> at engenho reports a healthy cluster as down. Use `banken` or the node's
+> target wrapper, named after the node (`k-ryn`, `helm-ryn`, `flux-ryn`,
+> `k9s-ryn`; `<node>-pod` for the pod-facing file). The context inside the
+> file is `engenho-<node>-<hash>`; the wrapper resolves it and refuses a file
+> holding any other context. A bare kubectl has no current-context by design.
 >
 > **The live binary routinely lags HEAD.** It is a nix store path installed by
 > a rebuild, so a running daemon can be several releases behind the repo — check
