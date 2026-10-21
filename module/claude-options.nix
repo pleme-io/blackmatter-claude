@@ -1078,6 +1078,22 @@ in
       '';
     };
 
+    prompts.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Also append one line per prompt to the same log: a timestamp, the
+        session id, a random-looking id and the top three candidate skill names
+        with their lexical scores. The prompt text is never stored, and
+        secret-shaped tokens are dropped before scoring. `skill-lint usage
+        misses` joins these lines to the skill calls that follow and lists the
+        skills that had a strong candidate and did not fire; `skill-lint
+        why-not` diagnoses each. Set false to pass `--no-prompts` to the
+        recorder: the line stops, the skill lines stay. Only takes effect under
+        `skillUsage.enable`.
+      '';
+    };
+
     mcp.enable = mkOption {
       type = types.bool;
       default = true;

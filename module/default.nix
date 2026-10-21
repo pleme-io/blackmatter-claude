@@ -743,7 +743,16 @@ in
             matcher = "mcp__.*";
             hooks = record;
           };
-          UserPromptSubmit = [ { hooks = record; } ];
+          UserPromptSubmit = [
+            {
+              hooks = [
+                {
+                  type = "command";
+                  command = "${skillLintPkg}/bin/skill-lint usage record${lib.optionalString (!skillUsageCfg.prompts.enable) " --no-prompts"}";
+                }
+              ];
+            }
+          ];
         };
       }
     ))
