@@ -61,7 +61,7 @@ Kubernetes (and Nomad, and PureRaft) distribution. One design, three axes:
 
 ## Authoritative docs (read these first)
 
-`pleme-io/engenho` is the runtime workspace; the private repos around it, and the full doc list with what each covers: `references/repos-and-docs.md`. Start with `engenho/docs/FLEET-DESIGN.md` (before any distributed, placement or GitOps work), `CONTROL-PLANE.md` (a running daemon) and `STATE-MACHINES.md` (a state machine).
+`pleme-io/engenho` is the runtime workspace; the repos around it and the full doc list: `references/repos-and-docs.md`. Start with `engenho/docs/FLEET-DESIGN.md` (distributed, placement, GitOps work), `CONTROL-PLANE.md` (a running daemon), `STATE-MACHINES.md`.
 
 ## Managing the running daemon (control plane — NOT the Kubernetes API)
 
