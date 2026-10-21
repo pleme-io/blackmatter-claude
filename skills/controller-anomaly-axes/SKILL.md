@@ -220,5 +220,5 @@ The codified `EscalationLadder` API, the surface-only and action-handler wire-in
 
 - `references/detection-axis.md`: axis 1, writing a new `ConflictDetector` or planner; the Rust primitives, the recipe, the 2026-05-28 load-path case study, anti-patterns, triggers
 - `references/recurrence-axis.md`: axis 2, the `anomaly_tracker` API and strip rules, wiring recurrence into status/metrics, anti-patterns, triggers
-- `references/reconciler-state.md`: status as one typed Phase, heartbeat, named stuck states
+- `references/reconciler-state.md`: one typed Phase, named stuck states
 - `references/escalation-ladder.md`: axis 3, the `escalation.rs` API, wiring the ladder and its action handlers into a failure arm, per-CR overrides, anti-patterns, triggers
