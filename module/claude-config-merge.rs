@@ -69,6 +69,11 @@ fn main() {
     // from old nix generations persisting after the module that created them
     // is removed). Also removes entries with missing binaries (GC'd paths).
     let cleaned = clean_stale_mcp_servers(&merged, &managed);
+    let cleaned = if args.iter().any(|a| a == "--keep-stale-hooks") {
+        cleaned
+    } else {
+        clean_stale_hooks(&cleaned, &managed)
+    };
 
     // Report and validate
     let valid = report_mcp_status(&cleaned);
@@ -200,6 +205,86 @@ fn clean_stale_mcp_servers(config: &JsonValue, managed: &JsonValue) -> JsonValue
         root.insert("mcpServers".to_string(), JsonValue::Object(servers));
     }
 
+    JsonValue::Object(root)
+}
+
+fn hook_commands(entry: &JsonValue) -> Vec<String> {
+    let JsonValue::Object(obj) = entry else {
+        return Vec::new();
+    };
+    let Some(JsonValue::Array(hooks)) = obj.get("hooks") else {
+        return Vec::new();
+    };
+    hooks
+        .iter()
+        .filter_map(|h| match h {
+            JsonValue::Object(o) => match o.get("command") {
+                Some(JsonValue::Str(c)) => Some(c.clone()),
+                _ => None,
+            },
+            _ => None,
+        })
+        .collect()
+}
+
+// The hook counterpart of clean_stale_mcp_servers. The deep merge keeps every
+// event the managed config no longer declares, so a hook from an old nix
+// generation survived a rebuild that dropped it (2026-10-22: a guardrail
+// SessionStart hook pointing at a garbage-collected 0.1.20 store path). An entry
+// whose commands all live in /nix/store and none of which the managed config
+// declares is removed; an entry with any command outside the store is the
+// user's and is kept.
+fn clean_stale_hooks(config: &JsonValue, managed: &JsonValue) -> JsonValue {
+    let JsonValue::Object(mut root) = config.clone() else {
+        return config.clone();
+    };
+    let managed_commands: std::collections::HashSet<String> = match managed {
+        JsonValue::Object(m) => match m.get("hooks") {
+            Some(JsonValue::Object(events)) => events
+                .values()
+                .filter_map(|v| match v {
+                    JsonValue::Array(xs) => Some(xs.iter().flat_map(hook_commands)),
+                    _ => None,
+                })
+                .flatten()
+                .collect(),
+            _ => std::collections::HashSet::new(),
+        },
+        _ => std::collections::HashSet::new(),
+    };
+    if let Some(JsonValue::Object(events)) = root.remove("hooks") {
+        let mut kept = BTreeMap::new();
+        for (event, entries) in events {
+            match entries {
+                JsonValue::Array(xs) => {
+                    let ys: Vec<JsonValue> = xs
+                        .into_iter()
+                        .filter(|e| {
+                            let cmds = hook_commands(e);
+                            let stale = !cmds.is_empty()
+                                && cmds.iter().all(|c| {
+                                    c.starts_with("/nix/store/") && !managed_commands.contains(c)
+                                });
+                            if stale {
+                                eprintln!(
+                                    "claude-config-merge: removing stale {event} hook (not in current config): {}",
+                                    cmds.join(" ; ")
+                                );
+                            }
+                            !stale
+                        })
+                        .collect();
+                    if !ys.is_empty() {
+                        kept.insert(event, JsonValue::Array(ys));
+                    }
+                }
+                other => {
+                    kept.insert(event, other);
+                }
+            }
+        }
+        root.insert("hooks".to_string(), JsonValue::Object(kept));
+    }
     JsonValue::Object(root)
 }
 
@@ -516,6 +601,67 @@ mod tests {
         ));
         fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    fn hook_entry(cmd: &str) -> JsonValue {
+        let mut hook = BTreeMap::new();
+        hook.insert("type".to_string(), JsonValue::Str("command".to_string()));
+        hook.insert("command".to_string(), JsonValue::Str(cmd.to_string()));
+        let mut entry = BTreeMap::new();
+        entry.insert("hooks".to_string(), JsonValue::Array(vec![JsonValue::Object(hook)]));
+        JsonValue::Object(entry)
+    }
+
+    fn with_hooks(events: &[(&str, Vec<JsonValue>)]) -> JsonValue {
+        let mut hooks = BTreeMap::new();
+        for (event, entries) in events {
+            hooks.insert((*event).to_string(), JsonValue::Array(entries.clone()));
+        }
+        let mut root = BTreeMap::new();
+        root.insert("hooks".to_string(), JsonValue::Object(hooks));
+        JsonValue::Object(root)
+    }
+
+    fn event_len(config: &JsonValue, event: &str) -> Option<usize> {
+        let JsonValue::Object(root) = config else { return None };
+        let Some(JsonValue::Object(hooks)) = root.get("hooks") else { return None };
+        match hooks.get(event) {
+            Some(JsonValue::Array(xs)) => Some(xs.len()),
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn a_nix_store_hook_the_managed_config_no_longer_declares_is_removed() {
+        let stale = "/nix/store/aaaa-rust_guardrail-0.1.20/bin/guardrail hook SessionStart";
+        let live = "/nix/store/bbbb-rust_guardrail-0.1.22/bin/guardrail hook PreToolUse";
+        let existing = with_hooks(&[
+            ("SessionStart", vec![hook_entry(stale)]),
+            ("PreToolUse", vec![hook_entry(live)]),
+        ]);
+        let managed = with_hooks(&[("PreToolUse", vec![hook_entry(live)])]);
+        let cleaned = clean_stale_hooks(&deep_merge(&existing, &managed), &managed);
+        assert_eq!(event_len(&cleaned, "SessionStart"), None);
+        assert_eq!(event_len(&cleaned, "PreToolUse"), Some(1));
+    }
+
+    #[test]
+    fn a_hook_the_user_added_outside_the_store_is_kept() {
+        let mine = "/usr/local/bin/my-hook";
+        let existing = with_hooks(&[("Stop", vec![hook_entry(mine)])]);
+        let managed = with_hooks(&[]);
+        let cleaned = clean_stale_hooks(&deep_merge(&existing, &managed), &managed);
+        assert_eq!(event_len(&cleaned, "Stop"), Some(1));
+    }
+
+    #[test]
+    fn a_managed_hook_survives_and_an_old_generation_of_it_beside_it_does_not() {
+        let old = "/nix/store/aaaa-tool-1/bin/tool hook Stop";
+        let new = "/nix/store/bbbb-tool-2/bin/tool hook Stop";
+        let existing = with_hooks(&[("Stop", vec![hook_entry(old), hook_entry(new)])]);
+        let managed = with_hooks(&[("Stop", vec![hook_entry(new)])]);
+        let cleaned = clean_stale_hooks(&existing, &managed);
+        assert_eq!(event_len(&cleaned, "Stop"), Some(1));
     }
 
     #[test]

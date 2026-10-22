@@ -436,6 +436,17 @@ in
       '';
     };
 
+    pruneStaleHooks = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Remove a settings.json hook whose commands all live in /nix/store and
+        that the current managed settings no longer declare: a hook from an old
+        generation. A hook with a command outside the store is the user's and is
+        kept. false keeps every merged hook, the behaviour before 2026-10-22.
+      '';
+    };
+
     # All typed options imported from claude-options.nix
     # Covers: settings, permissions, attribution, sandbox, hooks (typed submodules),
     # keybindings, agents, outputStyles, rules, lsp, mcp, skills, theme, mcpPackages
@@ -765,7 +776,7 @@ in
         run mkdir -p "$(dirname "${claudeSettingsPath}")"
         run ${configMergeBinary}/bin/claude-config-merge \
           "${managedSettingsFile}" \
-          --config "${claudeSettingsPath}"
+          --config "${claudeSettingsPath}"${lib.optionalString (!cfg.pruneStaleHooks) " --keep-stale-hooks"}
       '';
     })
 
