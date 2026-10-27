@@ -50,6 +50,7 @@ let
   guardrailCfg = cfg.guardrail;
   noroshiCfg = cfg.noroshi;
   skillUsageCfg = cfg.skillUsage;
+  inboxCfg = cfg.agentInbox;
   themeCfg = cfg.theme;
 
   inherit (pkgs.stdenv.hostPlatform) isLinux isDarwin;
@@ -722,6 +723,83 @@ in
         }
       ]) (lib.filterAttrs (_: policy: policy == "signal") noroshiCfg.events);
     })
+
+    (mkIf (cfg.enable && inboxCfg.package != null) (
+      let
+        exe = lib.getExe inboxCfg.package;
+        state =
+          if inboxCfg.stateFile != null then
+            inboxCfg.stateFile
+          else
+            "${config.xdg.stateHome}/plantao-inbox/state.json";
+        topic = if inboxCfg.topicFile != null then inboxCfg.topicFile else noroshiCfg.ntfy.topicFile;
+        server = if inboxCfg.server != null then inboxCfg.server else noroshiCfg.ntfy.server;
+        pollArgs = [
+          exe
+          "poll"
+          state
+          (toString topic)
+          server
+        ];
+        rule = {
+          hooks = [
+            {
+              type = "command";
+              command = lib.concatStringsSep " " [
+                exe
+                "hook"
+                (lib.escapeShellArg state)
+                (toString inboxCfg.staleSeconds)
+                (toString inboxCfg.digestHours)
+                (toString inboxCfg.maxLines)
+              ];
+              timeout = inboxCfg.timeoutSeconds;
+            }
+          ];
+        };
+      in
+      {
+        assertions = [
+          {
+            assertion = !inboxCfg.poll.enable || topic != null;
+            message = "blackmatter.components.claude.agentInbox.poll needs a topic file: set agentInbox.topicFile or noroshi.ntfy.topicFile.";
+          }
+        ];
+
+        blackmatter.components.claude.hooks = {
+          SessionStart = lib.optional inboxCfg.sessionStart.enable rule;
+          UserPromptSubmit = lib.optional inboxCfg.userPromptSubmit.enable rule;
+        };
+
+        launchd.agents.plantao-inbox = mkIf (isDarwin && inboxCfg.poll.enable) {
+          enable = true;
+          config = {
+            ProgramArguments = pollArgs;
+            StartInterval = inboxCfg.poll.intervalSeconds;
+            RunAtLoad = true;
+            ProcessType = "Background";
+            LowPriorityIO = true;
+          };
+        };
+
+        systemd.user.services.plantao-inbox = mkIf (isLinux && inboxCfg.poll.enable) {
+          Unit.Description = "plantao inbox: poll the ntfy topic for fleet alerts";
+          Service = {
+            Type = "oneshot";
+            ExecStart = lib.escapeShellArgs pollArgs;
+          };
+        };
+
+        systemd.user.timers.plantao-inbox = mkIf (isLinux && inboxCfg.poll.enable) {
+          Unit.Description = "plantao inbox poll";
+          Timer = {
+            OnBootSec = "30s";
+            OnUnitActiveSec = "${toString inboxCfg.poll.intervalSeconds}s";
+          };
+          Install.WantedBy = [ "timers.target" ];
+        };
+      }
+    ))
 
     # Skill usage → one log line per skill invocation, for keep / merge /
     # retire decisions made from counts. Same hook seam as guardrail and

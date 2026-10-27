@@ -1053,6 +1053,97 @@ in
   };
 
   # ══════════════════════════════════════════════════════════════════════
+  # AGENT INBOX — fleet health alerts as session context
+  # ══════════════════════════════════════════════════════════════════════
+
+  agentInbox = {
+    package = mkOption {
+      type = types.nullOr types.package;
+      default = null;
+      description = ''
+        The inbox program. It answers two verbs: `poll <stateFile> <topicFile>
+        <server>` reads the ntfy topic with ntfy's poll API and folds what it
+        reads into the state file; `hook <stateFile> <staleSeconds>
+        <digestHours> <maxLines>` prints one line per open alert, nothing when
+        all is clear, and a `plantao: inbox blind (reason)` line when it cannot
+        vouch for the state. Null: no source, so nothing is wired.
+      '';
+    };
+
+    sessionStart.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "Print the open alerts as context when a session starts.";
+    };
+
+    userPromptSubmit.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = "Print the open alerts as context with every prompt.";
+    };
+
+    poll = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Run `poll` in the background (a launchd agent on darwin, a systemd
+          user timer on Linux). The hooks only read the state file: a poll of
+          ntfy.sh measured 1.0 to 1.5 s from ryn, over the hooks' 500 ms budget.
+        '';
+      };
+
+      intervalSeconds = mkOption {
+        type = types.ints.between 15 3600;
+        default = 60;
+        description = "Seconds between polls.";
+      };
+    };
+
+    topicFile = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      description = "File holding the ntfy topic, read at run time. Null: noroshi.ntfy.topicFile.";
+    };
+
+    server = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      description = "ntfy server base URL. Null: noroshi.ntfy.server.";
+    };
+
+    stateFile = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      description = "The inbox state. Null: `$XDG_STATE_HOME/plantao-inbox/state.json`.";
+    };
+
+    staleSeconds = mkOption {
+      type = types.ints.between 30 86400;
+      default = 300;
+      description = "A state not polled for longer than this makes the hooks say blind.";
+    };
+
+    digestHours = mkOption {
+      type = types.ints.between 1 168;
+      default = 26;
+      description = "No plantao digest seen for longer than this makes the hooks say blind: alerts older than ntfy's cache can only come back through a digest.";
+    };
+
+    maxLines = mkOption {
+      type = types.ints.between 1 100;
+      default = 12;
+      description = "Alert lines printed at most; the rest are counted in one line.";
+    };
+
+    timeoutSeconds = mkOption {
+      type = types.ints.between 1 10;
+      default = 2;
+      description = "Claude Code kills a hook that runs longer; the hook only reads a file (about 30 ms).";
+    };
+  };
+
+  # ══════════════════════════════════════════════════════════════════════
   # SKILL USAGE — local record of which skills are actually invoked
   # ══════════════════════════════════════════════════════════════════════
   #
