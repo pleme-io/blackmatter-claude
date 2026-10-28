@@ -1093,6 +1093,17 @@ in
         '';
       };
 
+      caBundle = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Hand the poller nixpkgs' cacert bundle as SSL_CERT_FILE. A launchd
+          agent inherits no shell environment, so curl had no trust store and
+          every poll failed TLS verification (curl exit 60, 2026-10-28). False
+          leaves the environment untouched.
+        '';
+      };
+
       intervalSeconds = mkOption {
         type = types.ints.between 15 3600;
         default = 60;

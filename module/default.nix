@@ -645,22 +645,19 @@ in
     # The registrations above stay as they are: they are today's behaviour,
     # byte-for-byte, and each is also expressible as an action here.
     (mkIf (cfg.enable && guardrailCfg.enable) {
-      blackmatter.components.claude.hooks = lib.mapAttrs (
-        event: matcher:
-        [
-          (
-            {
-              hooks = [
-                {
-                  type = "command";
-                  command = "${guardrailCfg.package}/bin/guardrail hook ${event}";
-                }
-              ];
-            }
-            // lib.optionalAttrs (matcher != null) { inherit matcher; }
-          )
-        ]
-      ) guardrailCfg.hookRegistrations;
+      blackmatter.components.claude.hooks = lib.mapAttrs (event: matcher: [
+        (
+          {
+            hooks = [
+              {
+                type = "command";
+                command = "${guardrailCfg.package}/bin/guardrail hook ${event}";
+              }
+            ];
+          }
+          // lib.optionalAttrs (matcher != null) { inherit matcher; }
+        )
+      ]) guardrailCfg.hookRegistrations;
     })
 
     # Noroshi → signal-fire alerts when the agent is done or waiting.
@@ -703,9 +700,7 @@ in
               ;
             topic_file = noroshiCfg.ntfy.topicFile;
           }
-          // lib.optionalAttrs (noroshiCfg.ntfy.click != null) {
-            inherit (noroshiCfg.ntfy) click;
-          };
+          // lib.optionalAttrs (noroshiCfg.ntfy.click != null) { inherit (noroshiCfg.ntfy) click; };
         }
       );
 
@@ -775,6 +770,9 @@ in
           enable = true;
           config = {
             ProgramArguments = pollArgs;
+            EnvironmentVariables = lib.optionalAttrs inboxCfg.poll.caBundle {
+              SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+            };
             StartInterval = inboxCfg.poll.intervalSeconds;
             RunAtLoad = true;
             ProcessType = "Background";
@@ -787,6 +785,7 @@ in
           Service = {
             Type = "oneshot";
             ExecStart = lib.escapeShellArgs pollArgs;
+            Environment = lib.optional inboxCfg.poll.caBundle "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
           };
         };
 
@@ -837,7 +836,9 @@ in
               hooks = [
                 {
                   type = "command";
-                  command = "${skillLintPkg}/bin/skill-lint usage record${lib.optionalString (!skillUsageCfg.prompts.enable) " --no-prompts"}";
+                  command = "${skillLintPkg}/bin/skill-lint usage record${
+                    lib.optionalString (!skillUsageCfg.prompts.enable) " --no-prompts"
+                  }";
                 }
               ];
             }
