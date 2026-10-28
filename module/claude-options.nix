@@ -1062,7 +1062,7 @@ in
       default = null;
       description = ''
         The inbox program. It answers two verbs: `poll <stateFile> <topicFile>
-        <server>` reads the ntfy topic with ntfy's poll API and folds what it
+        <server> [<alertsUrl>]` reads the ntfy topic with ntfy's poll API and folds what it
         reads into the state file; `hook <stateFile> <staleSeconds>
         <digestHours> <maxLines>` prints one line per open alert, nothing when
         all is clear, and a `plantao: inbox blind (reason)` line when it cannot
@@ -1108,6 +1108,20 @@ in
         type = types.ints.between 15 3600;
         default = 60;
         description = "Seconds between polls.";
+      };
+
+      alertsUrl = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = ''
+          Base URL of the metrics store that holds vmalert's ALERTS series
+          (`poll <stateFile> <topicFile> <server> <alertsUrl>`). Each poll
+          reads the firing set and closes every Alertmanager alert that no
+          longer fires, so a Resolved message that never reached the topic
+          does not hold an alert open forever (rio's SystemdUnitFailed for
+          pleme-gitops-facts, 2026-10-28). A store that does not answer closes
+          nothing. Null: off; alerts close only on their Resolved message.
+        '';
       };
     };
 

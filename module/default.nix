@@ -735,7 +735,8 @@ in
           state
           (toString topic)
           server
-        ];
+        ]
+        ++ lib.optional (inboxCfg.poll.alertsUrl != null) inboxCfg.poll.alertsUrl;
         rule = {
           hooks = [
             {
