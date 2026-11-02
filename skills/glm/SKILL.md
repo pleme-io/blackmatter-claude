@@ -19,7 +19,7 @@ metadata:
 `claude-glm` is Claude Code running on Z.ai's Anthropic-compatible endpoint
 (`blackmatter.components.claude.providers.glm`). It has the same hooks, MCP
 servers, skills and CLAUDE.md as this session; only the model differs:
-`glm-5.3[1m]` for the opus and sonnet tiers, `glm-5.3-flash[1m]` for haiku.
+`glm-5.3[1m]`, Z.ai's best, on every tier, subagents included.
 
 ## When
 

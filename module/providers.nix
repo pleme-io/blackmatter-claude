@@ -73,7 +73,7 @@ in
         models = {
           opus = mkDefault "glm-5.3[1m]";
           sonnet = mkDefault "glm-5.3[1m]";
-          haiku = mkDefault "glm-5.3-flash[1m]";
+          haiku = mkDefault "glm-5.3[1m]";
         };
         env = {
           API_TIMEOUT_MS = mkDefault "3000000";
