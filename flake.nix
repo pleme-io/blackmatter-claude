@@ -203,6 +203,40 @@
           # nothing — which also means emptying the gated set by baselining
           # everything is a hard error, not a silent green. Verified
           # red-on-broken-input before commit, not merely green.
+          provider-wrapper =
+            let
+              fake = pkgs.writeShellScriptBin "claude" ''
+                echo "args: $*"
+                env
+              '';
+              w = import ./module/provider-wrapper.nix { inherit pkgs lib; } {
+                claude = fake;
+                name = "glm";
+                provider = {
+                  command = null;
+                  baseUrl = "https://example.invalid/api/anthropic";
+                  keyFile = "/run/provider-key";
+                  models = {
+                    opus = "big[1m]";
+                    sonnet = "mid";
+                    haiku = "small";
+                  };
+                  env.API_TIMEOUT_MS = "3000000";
+                };
+              };
+            in
+            pkgs.runCommand "provider-wrapper-check" { } ''
+              ANTHROPIC_API_KEY=leaked-anthropic ANTHROPIC_AUTH_TOKEN=leaked-token \
+                ${w}/bin/claude-glm -p hello > out
+              if grep -q leaked out; then echo "an inherited Anthropic credential reached the provider"; exit 1; fi
+              grep -qx 'ANTHROPIC_BASE_URL=https://example.invalid/api/anthropic' out
+              grep -qx 'ANTHROPIC_MODEL=big\[1m\]' out
+              grep -qx 'ANTHROPIC_DEFAULT_HAIKU_MODEL=small' out
+              grep -qx 'API_TIMEOUT_MS=3000000' out
+              grep -qx "args: --settings ${w.settings} -p hello" out
+              grep -q '"apiKeyHelper":".*/bin/cat /run/provider-key"' ${w.settings}
+              touch $out
+            '';
           skill-map =
             pkgs.runCommand "skill-map-check"
               { nativeBuildInputs = [ skill-lint.packages.${pkgs.stdenv.hostPlatform.system}.default ]; }

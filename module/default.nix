@@ -422,6 +422,7 @@ in
     guardrailModule
     ./desktop/home.nix
     ./tool-shell.nix
+    ./providers.nix
   ];
 
   options.blackmatter.components.claude = {
