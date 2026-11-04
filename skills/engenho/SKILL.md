@@ -154,6 +154,12 @@ Which crate owns which concern (types, apiserver, revoada, teia, store, substrat
    a `Weak` and there is a regression test.
 7. **Tatara/shigoto/shikumi, not bespoke** — daemon supervision, work graphs, and
    config go through the substrate primitives; shell beyond 3-line glue → tatara-script.
+8. **Security follows `theory/KAKOI.md`** — a pod is secure by what it does not say,
+   and its enclosure renders blue's `access` capabilities. A policy decision goes in
+   `engenho-kubelet/blue/kakoi/kakoi.b` under an empty posture, never in Rust. Every
+   process path enters through kakoi. A field the node cannot honour refuses that one
+   pod, never silently. Each control is configured off, never deleted. What holds
+   today and the open roots: `docs/SECURITY.md`.
 
 ## Common tasks
 
