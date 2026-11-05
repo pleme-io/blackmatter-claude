@@ -50,7 +50,9 @@ For a read-only second opinion, drop the worktree and add
 ## When it fails
 
 - `apiKeyHelper` error: the key file is missing; the node has no
-  `glm/api/drzln` sops secret yet.
+  `glm/api/drzln/coding/key` sops secret yet. It must be a Personal Coding
+  Plan key: a Standard key authenticates and then answers `1113`, and the
+  binary retries that `429` instead of failing.
 - 401 from `api.z.ai`: the key is wrong or the plan expired.
 - An unknown model: Z.ai renamed it; change
   `providers.glm.models` in the nix repo, not here.
