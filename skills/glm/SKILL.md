@@ -50,7 +50,7 @@ For a read-only second opinion, drop the worktree and add
 ## When it fails
 
 - `apiKeyHelper` error: the key file is missing; the node has no
-  `zai/api-key` sops secret yet.
+  `glm/api/drzln` sops secret yet.
 - 401 from `api.z.ai`: the key is wrong or the plan expired.
 - An unknown model: Z.ai renamed it; change
   `providers.glm.models` in the nix repo, not here.
