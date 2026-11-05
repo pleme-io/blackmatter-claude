@@ -220,21 +220,63 @@
                     opus = "big[1m]";
                     sonnet = "mid";
                     haiku = "small";
+                    fable = "big[1m]";
                   };
+                  modelNames = {
+                    opus = "Big";
+                    sonnet = "Mid";
+                    haiku = "Small";
+                    fable = "Big";
+                  };
+                  mcpServers.search = "https://example.invalid/mcp";
                   env.API_TIMEOUT_MS = "3000000";
                 };
               };
+              bare = import ./module/provider-wrapper.nix { inherit pkgs lib; } {
+                claude = fake;
+                name = "bare";
+                provider = {
+                  command = null;
+                  baseUrl = "https://example.invalid/api/anthropic";
+                  keyFile = "/run/provider-key";
+                  models = {
+                    opus = "big";
+                    sonnet = "mid";
+                    haiku = "small";
+                    fable = "big";
+                  };
+                  modelNames = {
+                    opus = "Big";
+                    sonnet = "Mid";
+                    haiku = "Small";
+                    fable = "Big";
+                  };
+                  mcpServers = { };
+                  env = { };
+                };
+              };
             in
-            pkgs.runCommand "provider-wrapper-check" { } ''
+            pkgs.runCommand "provider-wrapper-check" { nativeBuildInputs = [ pkgs.jq ]; } ''
               ANTHROPIC_API_KEY=leaked-anthropic ANTHROPIC_AUTH_TOKEN=leaked-token \
                 ${w}/bin/claude-glm -p hello > out
               if grep -q leaked out; then echo "an inherited Anthropic credential reached the provider"; exit 1; fi
               grep -qx 'ANTHROPIC_BASE_URL=https://example.invalid/api/anthropic' out
               grep -qx 'ANTHROPIC_MODEL=big\[1m\]' out
               grep -qx 'ANTHROPIC_DEFAULT_HAIKU_MODEL=small' out
+              grep -qx 'ANTHROPIC_DEFAULT_FABLE_MODEL=big\[1m\]' out
+              grep -qx 'ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME=Small' out
               grep -qx 'API_TIMEOUT_MS=3000000' out
-              grep -qx "args: --settings ${w.settings} -p hello" out
+              grep -qx "args: --settings ${w.settings} --mcp-config=${w.mcpConfig} -p hello" out
               grep -q '"apiKeyHelper":".*/bin/cat /run/provider-key"' ${w.settings}
+              test "$(jq -r '.modelOverrides."claude-haiku-5-5"' ${w.settings})" = small
+              test "$(jq -r .disableClaudeAiConnectors ${w.settings})" = true
+
+              printf 'secret\n' > key
+              helper="$(jq -r .mcpServers.search.headersHelper ${w.mcpConfig} | sed "s#/run/provider-key#$PWD/key#")"
+              test "$(sh -c "$helper")" = '{"Authorization":"Bearer secret"}'
+
+              ${bare}/bin/claude-bare -p hello > bare-out
+              grep -qx "args: --settings ${bare.settings} -p hello" bare-out
               touch $out
             '';
           skill-map =
