@@ -44,6 +44,33 @@ let
           type = types.str;
           description = "Model Claude Code's haiku tier maps to: subagents and background work.";
         };
+        fable = mkOption {
+          type = types.str;
+          description = "Model Claude Code's fable tier maps to, so an agent pinned to fable never sends an Anthropic ID to this endpoint.";
+        };
+      };
+      modelNames = {
+        opus = mkOption {
+          type = types.str;
+          description = "The opus tier's name in the model picker.";
+        };
+        sonnet = mkOption {
+          type = types.str;
+          description = "The sonnet tier's name in the model picker.";
+        };
+        haiku = mkOption {
+          type = types.str;
+          description = "The haiku tier's name in the model picker.";
+        };
+        fable = mkOption {
+          type = types.str;
+          description = "The fable tier's name in the model picker.";
+        };
+      };
+      mcpServers = mkOption {
+        type = types.attrsOf types.str;
+        default = { };
+        description = "The provider's own HTTP MCP servers, name to URL. Each authenticates with the provider's key as a bearer token, read from keyFile at connect time, and loads only in this binary.";
       };
       env = mkOption {
         type = types.attrsOf types.str;
@@ -73,12 +100,26 @@ in
         models = {
           opus = mkDefault "glm-5.3[1m]";
           sonnet = mkDefault "glm-5.3[1m]";
-          haiku = mkDefault "glm-5.3[1m]";
+          haiku = mkDefault "glm-5.3-flash[1m]";
+          fable = mkDefault "glm-5.3[1m]";
+        };
+        modelNames = {
+          opus = mkDefault "GLM-5.3";
+          sonnet = mkDefault "GLM-5.3";
+          haiku = mkDefault "GLM-5.3-Flash";
+          fable = mkDefault "GLM-5.3";
+        };
+        mcpServers = {
+          web-search-prime = mkDefault "https://api.z.ai/api/mcp/web_search_prime/mcp";
+          web-reader = mkDefault "https://api.z.ai/api/mcp/web_reader/mcp";
+          zread = mkDefault "https://api.z.ai/api/mcp/zread/mcp";
         };
         env = {
           API_TIMEOUT_MS = mkDefault "3000000";
           CLAUDE_CODE_AUTO_COMPACT_WINDOW = mkDefault "1000000";
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = mkDefault "1";
+          CLAUDE_CODE_MAX_OUTPUT_TOKENS = mkDefault "128000";
+          CLAUDE_CODE_MAX_RETRIES = mkDefault "4";
         };
       };
     }
