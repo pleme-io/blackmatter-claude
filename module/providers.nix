@@ -13,8 +13,26 @@ let
     types
     ;
   cfg = config.blackmatter.components.claude;
-  mkWrapper = import ./provider-wrapper.nix { inherit pkgs lib; };
+  mkWrapper = import ./provider-wrapper.nix {
+    inherit pkgs lib;
+    credential = pkgs.blueApp {
+      name = "claude-provider-credential";
+      program = ./provider-credential.b;
+    };
+  };
   enabled = lib.filterAttrs (_: p: p.enable) cfg.providers;
+  model = types.submodule {
+    options = {
+      id = mkOption {
+        type = types.str;
+        description = "The model ID sent to the provider.";
+      };
+      name = mkOption {
+        type = types.str;
+        description = "The model's name in the picker.";
+      };
+    };
+  };
   provider = types.submodule {
     options = {
       enable = mkEnableOption "a claude-<name> binary that runs Claude Code against this provider's Anthropic-compatible endpoint";
@@ -31,42 +49,13 @@ let
         type = types.str;
         description = "Absolute path of the file holding the provider's API key; read at each request through apiKeyHelper, never copied into the store.";
       };
-      models = {
-        opus = mkOption {
-          type = types.str;
-          description = "Model Claude Code's opus tier maps to; also the session default (ANTHROPIC_MODEL).";
-        };
-        sonnet = mkOption {
-          type = types.str;
-          description = "Model Claude Code's sonnet tier maps to.";
-        };
-        haiku = mkOption {
-          type = types.str;
-          description = "Model Claude Code's haiku tier maps to: subagents and background work.";
-        };
-        fable = mkOption {
-          type = types.str;
-          description = "Model Claude Code's fable tier maps to, so an agent pinned to fable never sends an Anthropic ID to this endpoint.";
-        };
-      };
-      modelNames = {
-        opus = mkOption {
-          type = types.str;
-          description = "The opus tier's name in the model picker.";
-        };
-        sonnet = mkOption {
-          type = types.str;
-          description = "The sonnet tier's name in the model picker.";
-        };
-        haiku = mkOption {
-          type = types.str;
-          description = "The haiku tier's name in the model picker.";
-        };
-        fable = mkOption {
-          type = types.str;
-          description = "The fable tier's name in the model picker.";
-        };
-      };
+      models = lib.genAttrs [ "opus" "sonnet" "haiku" "fable" ] (
+        tier:
+        mkOption {
+          type = model;
+          description = "The model Claude Code's ${tier} tier maps to. The opus tier is also the session default, the haiku tier also runs background work, and every tier is mapped so no Anthropic ID reaches this endpoint.";
+        }
+      );
       mcpServers = mkOption {
         type = types.attrsOf types.str;
         default = { };
@@ -95,33 +84,38 @@ in
 
   config = lib.mkMerge [
     {
-      blackmatter.components.claude.providers.glm = {
-        baseUrl = mkDefault "https://api.z.ai/api/anthropic";
-        models = {
-          opus = mkDefault "glm-5.3[1m]";
-          sonnet = mkDefault "glm-5.3[1m]";
-          haiku = mkDefault "glm-5.3-flash[1m]";
-          fable = mkDefault "glm-5.3[1m]";
+      blackmatter.components.claude.providers.glm =
+        let
+          glm53 = {
+            id = "glm-5.3[1m]";
+            name = "GLM-5.3";
+          };
+          flash = {
+            id = "glm-5.3-flash[1m]";
+            name = "GLM-5.3-Flash";
+          };
+        in
+        {
+          baseUrl = mkDefault "https://api.z.ai/api/anthropic";
+          models = lib.mapAttrs (_: mkDefault) {
+            opus = glm53;
+            sonnet = glm53;
+            fable = glm53;
+            haiku = flash;
+          };
+          mcpServers = lib.mapAttrs (_: mkDefault) {
+            web-search-prime = "https://api.z.ai/api/mcp/web_search_prime/mcp";
+            web-reader = "https://api.z.ai/api/mcp/web_reader/mcp";
+            zread = "https://api.z.ai/api/mcp/zread/mcp";
+          };
+          env = lib.mapAttrs (_: mkDefault) {
+            API_TIMEOUT_MS = "3000000";
+            CLAUDE_CODE_AUTO_COMPACT_WINDOW = "1000000";
+            CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
+            CLAUDE_CODE_MAX_OUTPUT_TOKENS = "128000";
+            CLAUDE_CODE_MAX_RETRIES = "4";
+          };
         };
-        modelNames = {
-          opus = mkDefault "GLM-5.3";
-          sonnet = mkDefault "GLM-5.3";
-          haiku = mkDefault "GLM-5.3-Flash";
-          fable = mkDefault "GLM-5.3";
-        };
-        mcpServers = {
-          web-search-prime = mkDefault "https://api.z.ai/api/mcp/web_search_prime/mcp";
-          web-reader = mkDefault "https://api.z.ai/api/mcp/web_reader/mcp";
-          zread = mkDefault "https://api.z.ai/api/mcp/zread/mcp";
-        };
-        env = {
-          API_TIMEOUT_MS = mkDefault "3000000";
-          CLAUDE_CODE_AUTO_COMPACT_WINDOW = mkDefault "1000000";
-          CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = mkDefault "1";
-          CLAUDE_CODE_MAX_OUTPUT_TOKENS = mkDefault "128000";
-          CLAUDE_CODE_MAX_RETRIES = mkDefault "4";
-        };
-      };
     }
     (mkIf cfg.enable {
       home.packages = lib.mapAttrsToList (

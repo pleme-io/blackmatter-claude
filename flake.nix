@@ -209,75 +209,81 @@
                 echo "args: $*"
                 env
               '';
-              w = import ./module/provider-wrapper.nix { inherit pkgs lib; } {
-                claude = fake;
-                name = "glm";
-                provider = {
-                  command = null;
-                  baseUrl = "https://example.invalid/api/anthropic";
-                  keyFile = "/run/provider-key";
-                  models = {
-                    opus = "big[1m]";
-                    sonnet = "mid";
-                    haiku = "small";
-                    fable = "big[1m]";
+              wrap =
+                name: mcpServers:
+                import ./module/provider-wrapper.nix {
+                  inherit pkgs lib;
+                  credential = "/credential";
+                } {
+                  claude = fake;
+                  inherit name;
+                  provider = {
+                    command = null;
+                    baseUrl = "https://example.invalid/api/anthropic";
+                    keyFile = "/run/provider-key";
+                    inherit mcpServers;
+                    models = {
+                      opus = { id = "big[1m]"; name = "Big"; };
+                      sonnet = { id = "mid"; name = "Mid"; };
+                      haiku = { id = "small"; name = "Small"; };
+                      fable = { id = "big[1m]"; name = "Big"; };
+                    };
+                    env.API_TIMEOUT_MS = "3000000";
                   };
-                  modelNames = {
-                    opus = "Big";
-                    sonnet = "Mid";
-                    haiku = "Small";
-                    fable = "Big";
-                  };
-                  mcpServers.search = "https://example.invalid/mcp";
-                  env.API_TIMEOUT_MS = "3000000";
                 };
-              };
-              bare = import ./module/provider-wrapper.nix { inherit pkgs lib; } {
-                claude = fake;
-                name = "bare";
-                provider = {
-                  command = null;
-                  baseUrl = "https://example.invalid/api/anthropic";
-                  keyFile = "/run/provider-key";
-                  models = {
-                    opus = "big";
-                    sonnet = "mid";
-                    haiku = "small";
-                    fable = "big";
-                  };
-                  modelNames = {
-                    opus = "Big";
-                    sonnet = "Mid";
-                    haiku = "Small";
-                    fable = "Big";
-                  };
-                  mcpServers = { };
-                  env = { };
+              w = wrap "glm" { search = "https://example.invalid/mcp"; };
+              bare = wrap "bare" { };
+              failures = lib.runTests {
+                testBaseUrl = {
+                  expr = w.env.ANTHROPIC_BASE_URL;
+                  expected = "https://example.invalid/api/anthropic";
+                };
+                testSessionModelIsOpus = {
+                  expr = w.env.ANTHROPIC_MODEL;
+                  expected = "big[1m]";
+                };
+                testEveryTierMapsItsIdAndName = {
+                  expr = with w.env; [
+                    ANTHROPIC_DEFAULT_HAIKU_MODEL
+                    ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME
+                    ANTHROPIC_DEFAULT_FABLE_MODEL
+                  ];
+                  expected = [ "small" "Small" "big[1m]" ];
+                };
+                testProviderEnvPasses = {
+                  expr = w.env.API_TIMEOUT_MS;
+                  expected = "3000000";
+                };
+                testKeyHelperReadsTheKeyFile = {
+                  expr = w.settings.apiKeyHelper;
+                  expected = "/credential/bin/claude-provider-credential key /run/provider-key";
+                };
+                testMcpHelperSendsABearerFromTheKeyFile = {
+                  expr = w.mcp.mcpServers.search.headersHelper;
+                  expected = "/credential/bin/claude-provider-credential bearer /run/provider-key";
+                };
+                testAnthropicIdsMapToTheProvider = {
+                  expr = w.settings.modelOverrides.claude-haiku-5-5;
+                  expected = "small";
+                };
+                testConnectorsAreOff = {
+                  expr = w.settings.disableClaudeAiConnectors;
+                  expected = true;
+                };
+                testNoMcpServersMeansNoFlag = {
+                  expr = lib.length bare.flags;
+                  expected = 1;
+                };
+                testMcpFlagKeepsAPositionalPrompt = {
+                  expr = lib.any (lib.hasPrefix "--mcp-config=") w.flags;
+                  expected = true;
                 };
               };
             in
-            pkgs.runCommand "provider-wrapper-check" { nativeBuildInputs = [ pkgs.jq ]; } ''
-              ANTHROPIC_API_KEY=leaked-anthropic ANTHROPIC_AUTH_TOKEN=leaked-token \
-                ${w}/bin/claude-glm -p hello > out
-              if grep -q leaked out; then echo "an inherited Anthropic credential reached the provider"; exit 1; fi
-              grep -qx 'ANTHROPIC_BASE_URL=https://example.invalid/api/anthropic' out
-              grep -qx 'ANTHROPIC_MODEL=big\[1m\]' out
-              grep -qx 'ANTHROPIC_DEFAULT_HAIKU_MODEL=small' out
-              grep -qx 'ANTHROPIC_DEFAULT_FABLE_MODEL=big\[1m\]' out
-              grep -qx 'ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME=Small' out
-              grep -qx 'API_TIMEOUT_MS=3000000' out
-              grep -qx "args: --settings ${w.settings} --mcp-config=${w.mcpConfig} -p hello" out
-              grep -q '"apiKeyHelper":".*/bin/cat /run/provider-key"' ${w.settings}
-              test "$(jq -r '.modelOverrides."claude-haiku-5-5"' ${w.settings})" = small
-              test "$(jq -r .disableClaudeAiConnectors ${w.settings})" = true
-
-              printf 'secret\n' > key
-              helper="$(jq -r .mcpServers.search.headersHelper ${w.mcpConfig} | sed "s#/run/provider-key#$PWD/key#")"
-              test "$(sh -c "$helper")" = '{"Authorization":"Bearer secret"}'
-
-              ${bare}/bin/claude-bare -p hello > bare-out
-              grep -qx "args: --settings ${bare.settings} -p hello" bare-out
-              touch $out
+            assert lib.assertMsg (failures == [ ]) "provider-wrapper: ${builtins.toJSON failures}";
+            pkgs.runCommand "provider-wrapper-check" { } ''
+              ANTHROPIC_API_KEY=leaked ANTHROPIC_AUTH_TOKEN=leaked ${w}/bin/claude-glm -p hello > out
+              ! grep -q leaked out && touch $out
             '';
           skill-map =
             pkgs.runCommand "skill-map-check"

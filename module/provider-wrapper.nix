@@ -1,21 +1,24 @@
-{ pkgs, lib }:
+{
+  pkgs,
+  lib,
+  credential,
+}:
 {
   claude,
   name,
   provider,
 }:
 let
-  tierEnv =
-    suffix: values:
-    lib.mapAttrs' (
-      tier: value: lib.nameValuePair "ANTHROPIC_DEFAULT_${lib.toUpper tier}_MODEL${suffix}" value
-    ) values;
+  helper = mode: "${credential}/bin/claude-provider-credential ${mode} ${lib.escapeShellArg provider.keyFile}";
+  inherit (provider) models;
   env = {
     ANTHROPIC_BASE_URL = provider.baseUrl;
-    ANTHROPIC_MODEL = provider.models.opus;
+    ANTHROPIC_MODEL = models.opus.id;
   }
-  // tierEnv "" provider.models
-  // tierEnv "_NAME" provider.modelNames
+  // lib.concatMapAttrs (tier: model: {
+    "ANTHROPIC_DEFAULT_${lib.toUpper tier}_MODEL" = model.id;
+    "ANTHROPIC_DEFAULT_${lib.toUpper tier}_MODEL_NAME" = model.name;
+  }) models
   // provider.env;
   shadowed = [
     "ANTHROPIC_API_KEY"
@@ -23,39 +26,37 @@ let
     "CLAUDE_CODE_USE_BEDROCK"
     "CLAUDE_CODE_USE_VERTEX"
   ];
-  key = lib.escapeShellArg provider.keyFile;
-  settings = pkgs.writeText "claude-${name}-settings.json" (
-    builtins.toJSON {
-      apiKeyHelper = "${pkgs.coreutils}/bin/cat ${key}";
-      disableClaudeAiConnectors = true;
-      modelOverrides = {
-        claude-opus-5-5 = provider.models.opus;
-        claude-sonnet-5-5 = provider.models.sonnet;
-        claude-haiku-5-5 = provider.models.haiku;
-      };
-    }
-  );
-  mcpConfig = pkgs.writeText "claude-${name}-mcp.json" (
-    builtins.toJSON {
-      mcpServers = lib.mapAttrs (_: url: {
-        type = "http";
-        inherit url;
-        headersHelper = "${pkgs.jq}/bin/jq -cn --rawfile k ${key} '{Authorization: (\"Bearer \" + ($k | rtrimstr(\"\\n\")))}'";
-      }) provider.mcpServers;
-    }
-  );
+  settings = {
+    apiKeyHelper = helper "key";
+    disableClaudeAiConnectors = true;
+    modelOverrides = {
+      claude-opus-5-5 = models.opus.id;
+      claude-sonnet-5-5 = models.sonnet.id;
+      claude-haiku-5-5 = models.haiku.id;
+    };
+  };
+  mcp.mcpServers = lib.mapAttrs (_: url: {
+    type = "http";
+    inherit url;
+    headersHelper = helper "bearer";
+  }) provider.mcpServers;
+  settingsFile = pkgs.writeText "claude-${name}-settings.json" (builtins.toJSON settings);
+  mcpFile = pkgs.writeText "claude-${name}-mcp.json" (builtins.toJSON mcp);
+  flags = [
+    "--settings ${settingsFile}"
+  ]
+  ++ lib.optional (provider.mcpServers != { }) "--mcp-config=${mcpFile}";
   command = if provider.command != null then provider.command else "claude-${name}";
 in
 pkgs.runCommand command
   {
     nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
-    passthru = { inherit env settings mcpConfig command; };
+    passthru = { inherit env settings mcp flags command; };
     meta.mainProgram = command;
   }
   ''
     makeBinaryWrapper ${claude}/bin/claude $out/bin/${command} \
       ${lib.concatMapStringsSep " " (v: "--unset ${v}") shadowed} \
       ${lib.concatStringsSep " " (lib.mapAttrsToList (k: v: "--set ${k} ${lib.escapeShellArg v}") env)} \
-      --add-flags "--settings ${settings}" \
-      ${lib.optionalString (provider.mcpServers != { }) ''--add-flags "--mcp-config=${mcpConfig}"''}
+      ${lib.concatMapStringsSep " " (f: "--add-flags ${lib.escapeShellArg f}") flags}
   ''
