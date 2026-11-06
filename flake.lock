@@ -2209,11 +2209,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793795557,
-        "narHash": "sha256-47L1OKWVrrzpEGyULayVR0S0iEneAbwg6Ocrv6bq69k=",
+        "lastModified": 1793927220,
+        "narHash": "sha256-fyq+t44l8VvhYAwX1OfQlwlcJo4UbymYcD0Gt6Ol5wo=",
         "owner": "pleme-io",
         "repo": "noroshi",
-        "rev": "1f8bdd2c32f9d3728b78b5c9554b039b14b735d6",
+        "rev": "113cafb561dd25c8d652bfad804d88af0744f039",
         "type": "github"
       },
       "original": {
@@ -2484,11 +2484,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793743201,
-        "narHash": "sha256-1wlggaS5yoiWrcj+oRQvSXJFuiTpUNbkfASOmCsfbdI=",
+        "lastModified": 1793900558,
+        "narHash": "sha256-72t0DgeJ9yhtMBJ/eJSVdIx7LLEtAGecz+KrPrs/NI4=",
         "owner": "pleme-io",
         "repo": "skill-lint",
-        "rev": "b283726ac5dabf1d3c5e423f0be407349e9bc5fd",
+        "rev": "7073bb97910231d150c210b30578ff8292ebb455",
         "type": "github"
       },
       "original": {
