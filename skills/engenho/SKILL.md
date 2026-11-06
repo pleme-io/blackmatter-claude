@@ -171,6 +171,14 @@ Which crate owns which concern (types, apiserver, revoada, teia, store, substrat
   the process.
 - **"What's the state of cluster X?"** → `mcp__engenho__cluster_status` then
   `cluster_pods` / `cluster_resource_list`.
+- **"Run OCI pods on a darwin host whose engenho is `native`"** → a second
+  daemon with `kubelet_backend: podman` on a started podman machine, with its
+  own `cluster.name`, `node_manifests_dir`, `data_dir`, ports and control
+  socket. On defaults it loads `/etc/engenho/manifests.d` and runs the host's
+  workloads (near miss 2026-11-06); check `config-show | rg /etc` first.
+- **"A pod stays ClosureUntrusted"** → read the live
+  `runtime.closure_signatures`; a refusal made under an earlier mode is not
+  retried, so delete the pod (pangea-postgres, 42 d, 2026-11-06).
 - **"Bring up / tear down the local cluster"** → kikai `up` / `destroy` (suggest the
   user run via `! kikai …` for interactive auth).
 - **"Where is the <X> state machine?"** → `engenho/docs/STATE-MACHINES.md` index →
