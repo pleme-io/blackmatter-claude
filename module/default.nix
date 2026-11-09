@@ -611,7 +611,7 @@ in
       # An agent scaffolded a new fleet tool and named it with an ad-hoc `rg`
       # sweep. The `naming` skill was DEPLOYED, its description already fires
       # on "minting any new crate / repo / doctrine / primitive", and a
-      # research pass in the same session had just named theory/NAMING.md and
+      # research pass in the same session had just named the naming law and
       # the skill by name. Every advisory surface was correct and present, and
       # none of them reached the moment the name was chosen. A hook rides the
       # tool call that mints the thing, which is that moment.
