@@ -2,6 +2,7 @@
   lib,
   buildNpmPackage,
   fetchurl,
+  jq,
 }:
 buildNpmPackage (finalAttrs: {
   pname = "zai-mcp-server";
@@ -14,6 +15,8 @@ buildNpmPackage (finalAttrs: {
 
   postPatch = ''
     cp ${./package-lock.json} package-lock.json
+    ${lib.getExe jq} 'del(.scripts.prepare)' package.json > package.json.new
+    mv package.json.new package.json
   '';
 
   npmDepsHash = "sha256-AENicvmN0tK2b69ec0IrN+5qxbjNemSrvIpGkT7fdaU=";

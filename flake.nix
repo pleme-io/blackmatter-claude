@@ -384,7 +384,8 @@
                 ];
               };
               glm = lib.head hm.config.home.packages;
-              vision = "${pkgs.callPackage ./module/zai-mcp-server { }}/bin/zai-mcp-server";
+              server = pkgs.callPackage ./module/zai-mcp-server { };
+              vision = "${server}/bin/zai-mcp-server";
               plugins = lib.filter (lib.hasPrefix "--plugin-dir=") glm.flags;
             in
             assert lib.assertMsg (lib.length plugins == 2) "zai-glm: expected both Z.ai plugins, got ${builtins.toJSON plugins}";
@@ -393,6 +394,7 @@
               server='.mcpServers."zai-mcp-server"'
               jq -e "$server.args[3] == \"${vision}\" and $server.args[2] == \"Z_AI_API_KEY\" and $server.env.Z_AI_MODE == \"ZAI\" and ($server.env | has(\"Z_AI_API_KEY\") | not)" ${glm.mcpFile}
               test -x ${vision}
+              jq -e '.scripts | has("prepare") | not' ${server}/lib/node_modules/@z_ai/mcp-server/package.json
               echo sentinel.k1 > provider-key
               ! grep -q sentinel.k1 ${glm.mcpFile} ${glm}/bin/claude-glm
               mapfile -t argv < <(jq -r "$server.args[]" ${glm.mcpFile})
