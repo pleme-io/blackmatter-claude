@@ -2394,7 +2394,8 @@
         ],
         "noroshi": "noroshi",
         "skill-lint": "skill-lint",
-        "substrate": "substrate"
+        "substrate": "substrate",
+        "zai-coding-plugins": "zai-coding-plugins"
       }
     },
     "rust-analyzer-src": {
@@ -2732,6 +2733,22 @@
       "original": {
         "owner": "numtide",
         "repo": "treefmt-nix",
+        "type": "github"
+      }
+    },
+    "zai-coding-plugins": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1771775480,
+        "narHash": "sha256-nJi4OPHwScxWHWDSQatgONS+Nna7S3qPWqHYMadG3VM=",
+        "owner": "zai-org",
+        "repo": "zai-coding-plugins",
+        "rev": "0446d0bb0bc537d97d3ab3664c4b8b9c4a0e1254",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zai-org",
+        "repo": "zai-coding-plugins",
         "type": "github"
       }
     },

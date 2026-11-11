@@ -24,6 +24,7 @@
   claude-code,
   skill-lint,
   guardrailModule,
+  zai-coding-plugins,
 }:
 {
   lib,
@@ -422,7 +423,7 @@ in
     guardrailModule
     ./desktop/home.nix
     ./tool-shell.nix
-    ./providers.nix
+    (import ./providers.nix { inherit zai-coding-plugins; })
   ];
 
   options.blackmatter.components.claude = {

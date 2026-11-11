@@ -1,3 +1,4 @@
+{ zai-coding-plugins }:
 {
   config,
   lib,
@@ -13,12 +14,15 @@ let
     types
     ;
   cfg = config.blackmatter.components.claude;
-  mkWrapper = import ./provider-wrapper.nix {
-    inherit pkgs lib;
-    credential = pkgs.blueApp {
-      name = "claude-provider-credential";
-      program = ./provider-credential.b;
-    };
+  credential = pkgs.blueApp {
+    name = "claude-provider-credential";
+    program = ./provider-credential.b;
+  };
+  mkWrapper = import ./provider-wrapper.nix { inherit pkgs lib credential; };
+  zaiPlugins = import ./zai-coding-plugins.nix {
+    inherit pkgs lib credential;
+    src = zai-coding-plugins;
+    inherit (cfg.providers.glm) keyFile;
   };
   enabled = lib.filterAttrs (_: p: p.enable) cfg.providers;
   model = types.submodule {
@@ -30,6 +34,47 @@ let
       name = mkOption {
         type = types.str;
         description = "The model's name in the picker.";
+      };
+    };
+  };
+  stdioServer = types.submodule {
+    options = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Whether this binary loads the server.";
+      };
+      command = mkOption {
+        type = types.str;
+        description = "The server's executable.";
+      };
+      args = mkOption {
+        type = types.listOf types.str;
+        default = [ ];
+        description = "Arguments after the command.";
+      };
+      keyEnv = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "The variable the server reads the provider's key from. It is set from keyFile when the server starts, and never written to the store or the MCP config. null starts the server without the key.";
+      };
+      env = mkOption {
+        type = types.attrsOf types.str;
+        default = { };
+        description = "Further environment for the server; never the key.";
+      };
+    };
+  };
+  plugin = types.submodule {
+    options = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Whether this binary loads the plugin.";
+      };
+      path = mkOption {
+        type = types.path;
+        description = "The plugin's directory, loaded with --plugin-dir.";
       };
     };
   };
@@ -60,6 +105,16 @@ let
         type = types.attrsOf types.str;
         default = { };
         description = "The provider's own HTTP MCP servers, name to URL. Each authenticates with the provider's key as a bearer token, read from keyFile at connect time, and loads only in this binary.";
+      };
+      stdioMcpServers = mkOption {
+        type = types.attrsOf stdioServer;
+        default = { };
+        description = "The provider's local stdio MCP servers. They load only in this binary.";
+      };
+      plugins = mkOption {
+        type = types.attrsOf plugin;
+        default = { };
+        description = "Claude Code plugins that load only in this binary, each through --plugin-dir; nothing is written to ~/.claude.";
       };
       env = mkOption {
         type = types.attrsOf types.str;
@@ -108,6 +163,18 @@ in
             web-reader = "https://api.z.ai/api/mcp/web_reader/mcp";
             zread = "https://api.z.ai/api/mcp/zread/mcp";
           };
+          stdioMcpServers.zai-mcp-server = {
+            enable = mkDefault true;
+            command = mkDefault (lib.getExe (pkgs.callPackage ./zai-mcp-server { }));
+            keyEnv = mkDefault "Z_AI_API_KEY";
+            env = lib.mapAttrs (_: mkDefault) {
+              Z_AI_MODE = "ZAI";
+            };
+          };
+          plugins = lib.mapAttrs (_: path: {
+            enable = mkDefault true;
+            path = mkDefault path;
+          }) zaiPlugins;
           env = lib.mapAttrs (_: mkDefault) {
             API_TIMEOUT_MS = "3000000";
             CLAUDE_CODE_AUTO_COMPACT_WINDOW = "1000000";

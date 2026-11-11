@@ -25,6 +25,10 @@
       url = "github:pleme-io/noroshi";
       inputs.substrate.follows = "substrate";
     };
+    zai-coding-plugins = {
+      url = "github:zai-org/zai-coding-plugins";
+      flake = false;
+    };
   };
 
   outputs =
@@ -36,6 +40,7 @@
       guardrail,
       skill-lint,
       noroshi,
+      zai-coding-plugins,
       ...
     }:
     (import "${substrate}/lib/blackmatter-component-flake.nix") {
@@ -43,7 +48,7 @@
       name = "blackmatter-claude";
       description = "Claude Code integration — LSP, MCP servers, skills, guardrails";
       modules.homeManager = import ./module {
-        inherit claude-code skill-lint;
+        inherit claude-code skill-lint zai-coding-plugins;
         guardrailModule = guardrail.homeManagerModules.default;
       };
       modules.darwin = ./module/desktop/darwin.nix;
@@ -52,6 +57,7 @@
         guardrail-rules = guardrail + "/rules";
         skill-lint = skill-lint.packages.${prev.stdenv.hostPlatform.system}.default;
         claude-desktop = final.callPackage ./module/desktop/package.nix { };
+        zai-mcp-server = final.callPackage ./module/zai-mcp-server { };
         noroshi = noroshi.packages.${prev.stdenv.hostPlatform.system}.default;
       };
       # `claude-config-merge.rs` / `statusline.rs` are zero-dependency
@@ -210,7 +216,7 @@
                 env
               '';
               wrap =
-                name: mcpServers:
+                name: mcpServers: extra:
                 import ./module/provider-wrapper.nix {
                   inherit pkgs lib;
                   credential = "/credential";
@@ -229,10 +235,47 @@
                       fable = { id = "big[1m]"; name = "Big"; };
                     };
                     env.API_TIMEOUT_MS = "3000000";
+                    stdioMcpServers = { };
+                    plugins = { };
+                  }
+                  // extra;
+                };
+              w = wrap "glm" { search = "https://example.invalid/mcp"; } {
+                stdioMcpServers = {
+                  vision = {
+                    enable = true;
+                    command = "/vision";
+                    args = [ "--stdio" ];
+                    keyEnv = "VISION_KEY";
+                    env.MODE = "ZAI";
+                  };
+                  keyless = {
+                    enable = true;
+                    command = "/keyless";
+                    args = [ ];
+                    keyEnv = null;
+                    env = { };
+                  };
+                  off = {
+                    enable = false;
+                    command = "/off";
+                    args = [ ];
+                    keyEnv = null;
+                    env = { };
                   };
                 };
-              w = wrap "glm" { search = "https://example.invalid/mcp"; };
-              bare = wrap "bare" { };
+                plugins = {
+                  usage = {
+                    enable = true;
+                    path = "/plugins/usage";
+                  };
+                  bug = {
+                    enable = false;
+                    path = "/plugins/bug";
+                  };
+                };
+              };
+              bare = wrap "bare" { } { };
               failures = lib.runTests {
                 testBaseUrl = {
                   expr = w.env.ANTHROPIC_BASE_URL;
@@ -278,12 +321,93 @@
                   expr = lib.any (lib.hasPrefix "--mcp-config=") w.flags;
                   expected = true;
                 };
+                testStdioServerStartsThroughTheKeyFile = {
+                  expr = w.mcp.mcpServers.vision;
+                  expected = {
+                    type = "stdio";
+                    command = "/credential/bin/claude-provider-credential";
+                    args = [ "exec" "/run/provider-key" "VISION_KEY" "/vision" "--stdio" ];
+                    env.MODE = "ZAI";
+                  };
+                };
+                testKeylessStdioServerRunsItsCommand = {
+                  expr = with w.mcp.mcpServers.keyless; [ command args ];
+                  expected = [ "/keyless" [ ] ];
+                };
+                testDisabledStdioServerIsAbsent = {
+                  expr = w.mcp.mcpServers ? off;
+                  expected = false;
+                };
+                testEnabledPluginLoadsWithPluginDir = {
+                  expr = lib.filter (lib.hasPrefix "--plugin-dir=") w.flags;
+                  expected = [ "--plugin-dir=/plugins/usage" ];
+                };
               };
             in
             assert lib.assertMsg (failures == [ ]) "provider-wrapper: ${builtins.toJSON failures}";
             pkgs.runCommand "provider-wrapper-check" { } ''
               ANTHROPIC_API_KEY=leaked ANTHROPIC_AUTH_TOKEN=leaked ${w}/bin/claude-glm -p hello > out
               ! grep -q leaked out && touch $out
+            '';
+          zai-glm =
+            let
+              credential = pkgs.writeShellScriptBin "claude-provider-credential" ''
+                file=$2 var=$3
+                shift 3
+                export "$var=$(cat "$file")"; exec "$@"
+              '';
+              stubs = {
+                options.blackmatter.components.claude = {
+                  enable = lib.mkEnableOption "claude";
+                  package = lib.mkOption { type = lib.types.package; };
+                };
+                options.home.packages = lib.mkOption {
+                  type = lib.types.listOf lib.types.package;
+                  default = [ ];
+                };
+              };
+              hm = lib.evalModules {
+                specialArgs.pkgs = pkgs.extend (_: _: { blueApp = _: credential; });
+                modules = [
+                  stubs
+                  (import ./module/providers.nix { inherit zai-coding-plugins; })
+                  {
+                    blackmatter.components.claude = {
+                      enable = true;
+                      package = pkgs.writeShellScriptBin "claude" "exit 0";
+                      providers.glm = {
+                        enable = true;
+                        keyFile = "provider-key";
+                      };
+                    };
+                  }
+                ];
+              };
+              glm = lib.head hm.config.home.packages;
+              vision = "${pkgs.callPackage ./module/zai-mcp-server { }}/bin/zai-mcp-server";
+              plugins = lib.filter (lib.hasPrefix "--plugin-dir=") glm.flags;
+            in
+            assert lib.assertMsg (lib.length plugins == 2) "zai-glm: expected both Z.ai plugins, got ${builtins.toJSON plugins}";
+            pkgs.runCommand "zai-glm-check" { nativeBuildInputs = [ pkgs.jq pkgs.nodejs ]; } ''
+              export HOME=$TMPDIR
+              server='.mcpServers."zai-mcp-server"'
+              jq -e "$server.args[3] == \"${vision}\" and $server.args[2] == \"Z_AI_API_KEY\" and $server.env.Z_AI_MODE == \"ZAI\" and ($server.env | has(\"Z_AI_API_KEY\") | not)" ${glm.mcpFile}
+              test -x ${vision}
+              echo sentinel.k1 > provider-key
+              ! grep -q sentinel.k1 ${glm.mcpFile} ${glm}/bin/claude-glm
+              mapfile -t argv < <(jq -r "$server.args[]" ${glm.mcpFile})
+              printf '%s\n' \
+                '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"check","version":"0"}}}' \
+                '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' > requests
+              (cat requests; sleep 5) | Z_AI_MODE=ZAI "$(jq -r "$server.command" ${glm.mcpFile})" "''${argv[@]}" > replies
+              grep -q '"analyze_image"' replies
+              ! grep -rq sentinel.k1 replies $HOME/.zai
+              for p in ${lib.concatMapStringsSep " " (lib.removePrefix "--plugin-dir=") plugins}; do
+                test -f $p/.claude-plugin/plugin.json
+                grep -q claude-provider-credential $p/skills/*/scripts/*.mjs
+                node --check $p/skills/*/scripts/*.mjs
+              done
+              touch $out
             '';
           skill-map =
             pkgs.runCommand "skill-map-check"

@@ -9,7 +9,8 @@
   provider,
 }:
 let
-  helper = mode: "${credential}/bin/claude-provider-credential ${mode} ${lib.escapeShellArg provider.keyFile}";
+  credentialBin = "${credential}/bin/claude-provider-credential";
+  helper = mode: "${credentialBin} ${mode} ${lib.escapeShellArg provider.keyFile}";
   inherit (provider) models;
   env = {
     ANTHROPIC_BASE_URL = provider.baseUrl;
@@ -35,23 +36,57 @@ let
       claude-haiku-5-5 = models.haiku.id;
     };
   };
-  mcp.mcpServers = lib.mapAttrs (_: url: {
+  httpServers = lib.mapAttrs (_: url: {
     type = "http";
     inherit url;
     headersHelper = helper "bearer";
   }) provider.mcpServers;
+  stdioServers = lib.mapAttrs (
+    _: s:
+    {
+      type = "stdio";
+      inherit (s) env;
+    }
+    // (
+      if s.keyEnv == null then
+        { inherit (s) command args; }
+      else
+        {
+          command = credentialBin;
+          args = [
+            "exec"
+            provider.keyFile
+            s.keyEnv
+            s.command
+          ]
+          ++ s.args;
+        }
+    )
+  ) (lib.filterAttrs (_: s: s.enable) provider.stdioMcpServers);
+  mcp.mcpServers = httpServers // stdioServers;
+  plugins = lib.mapAttrsToList (_: p: p.path) (lib.filterAttrs (_: p: p.enable) provider.plugins);
   settingsFile = pkgs.writeText "claude-${name}-settings.json" (builtins.toJSON settings);
   mcpFile = pkgs.writeText "claude-${name}-mcp.json" (builtins.toJSON mcp);
   flags = [
     "--settings ${settingsFile}"
   ]
-  ++ lib.optional (provider.mcpServers != { }) "--mcp-config=${mcpFile}";
+  ++ lib.optional (mcp.mcpServers != { }) "--mcp-config=${mcpFile}"
+  ++ map (p: "--plugin-dir=${p}") plugins;
   command = if provider.command != null then provider.command else "claude-${name}";
 in
 pkgs.runCommand command
   {
     nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
-    passthru = { inherit env settings mcp flags command; };
+    passthru = {
+      inherit
+        env
+        settings
+        mcp
+        mcpFile
+        flags
+        command
+        ;
+    };
     meta.mainProgram = command;
   }
   ''
