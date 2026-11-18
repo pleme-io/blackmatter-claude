@@ -138,23 +138,23 @@ Which crate owns which concern (types, apiserver, revoada, teia, store, substrat
 
 ## The non-negotiable rules (don't violate)
 
-1. **No hand-authored K8s resource types** — every kind is generated from OpenAPI
+- **No hand-authored K8s resource types** — every kind is generated from OpenAPI
    v3 by `kube-forge`; extend the generator, never sprintf YAML.
-2. **Secrets through cofre** — k8s Secret objects carry references, not plaintext.
-3. **One truth, many faces** — never let a face own state; translate to
+- **Secrets through cofre** — k8s Secret objects carry references, not plaintext.
+- **One truth, many faces** — never let a face own state; translate to
    `ResourceCommand`/`StoreMesh`.
-4. **Attest every transition** — role shifts + materializations write
+- **Attest every transition** — role shifts + materializations write
    BLAKE3+ed25519 chain blocks; trust = K-of-N independent rebuilds (`QuorumOutcome`).
-5. **Ship the producer with the vocabulary** — see the defect class above. A
+- **Ship the producer with the vocabulary** — see the defect class above. A
    trait with backends and no caller is the most common way a capability is
    absent while every test is green.
-6. **A detached task must NOT hold `Arc<StoreMesh>`** — it keeps the Raft log
+- **A detached task must NOT hold `Arc<StoreMesh>`** — it keeps the Raft log
    and fjall handles alive for the process lifetime, so shutdown can never
    reclaim the store. Hit twice (the :10250 and :2379 listeners); both now hold
    a `Weak` and there is a regression test.
-7. **Tatara/shigoto/shikumi, not bespoke** — daemon supervision, work graphs, and
+- **Tatara/shigoto/shikumi, not bespoke** — daemon supervision, work graphs, and
    config go through the substrate primitives; shell beyond 3-line glue → tatara-script.
-8. **Security follows kakoi** — a pod is secure by what it does not say,
+- **Security follows kakoi** — a pod is secure by what it does not say,
    and its enclosure renders blue's `access` capabilities. A policy decision goes in
    `engenho-kubelet/blue/kakoi/kakoi.b` under an empty posture, never in Rust. Every
    process path enters through kakoi. A field the node cannot honour refuses that one
